@@ -1,0 +1,262 @@
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/Makefile.in ns-2.33/Makefile.in
+*** ns-2.33-ORIG/Makefile.in	Wed Jun 17 11:58:42 2009
+--- ns-2.33/Makefile.in	Thu Jun 18 09:03:43 2009
+***************
+*** 271,276 ****
+--- 271,277 ----
+  	dsr/simplecache.o dsr/sr_forwarder.o \
+  	aodv/aodv_logs.o aodv/aodv.o \
+  	aodv/aodv_rtable.o aodv/aodv_rqueue.o \
++ 	olsr/OLSR.o olsr/OLSR_state.o olsr/OLSR_rtable.o olsr/OLSR_printer.o \
+  	common/ns-process.o \
+  	satellite/satgeometry.o satellite/sathandoff.o \
+  	satellite/satlink.o satellite/satnode.o \
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/common/packet.h ns-2.33/common/packet.h
+*** ns-2.33-ORIG/common/packet.h	Wed Jun 17 11:58:42 2009
+--- ns-2.33/common/packet.h	Thu Jun 18 09:04:24 2009
+***************
+*** 179,186 ****
+          // Bell Labs Traffic Trace Type (PackMime OL)
+  static const packet_t PT_BLTRACE = 60;
+  
+          // insert new packet types here
+! static packet_t       PT_NTYPE = 61; // This MUST be the LAST one
+  
+  enum packetClass
+  {
+--- 179,189 ----
+          // Bell Labs Traffic Trace Type (PackMime OL)
+  static const packet_t PT_BLTRACE = 60;
+  
++         // UM-OLSR packet
++ static const packet_t PT_OLSR = 61;
++ 
+          // insert new packet types here
+! static packet_t       PT_NTYPE = 62; // This MUST be the LAST one
+  
+  enum packetClass
+  {
+***************
+*** 377,382 ****
+--- 380,388 ----
+  		// Bell Labs (PackMime OL)
+  		name_[PT_BLTRACE]="BellLabsTrace";
+  		
++ 		// UM-OLSR
++ 		name_[PT_OLSR]= "OLSR";
++ 		
+  		name_[PT_NTYPE]= "undefined";
+  	}
+  	static int addPacket(char *name);
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/queue/priqueue.cc ns-2.33/queue/priqueue.cc
+*** ns-2.33-ORIG/queue/priqueue.cc	Wed Jun 17 11:58:42 2009
+--- ns-2.33/queue/priqueue.cc	Thu Jun 18 09:03:43 2009
+***************
+*** 90,95 ****
+--- 90,96 ----
+  		case PT_MESSAGE:
+                  case PT_TORA:
+                  case PT_AODV:
++ 		case PT_OLSR:
+                          recvHighPriority(p, h);
+                          break;
+  
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/tcl/lib/ns-agent.tcl ns-2.33/tcl/lib/ns-agent.tcl
+*** ns-2.33-ORIG/tcl/lib/ns-agent.tcl	Wed Jun 17 11:58:40 2009
+--- ns-2.33/tcl/lib/ns-agent.tcl	Thu Jun 18 09:03:43 2009
+***************
+*** 192,194 ****
+--- 192,197 ----
+  Agent/AODV set sport_   0
+  Agent/AODV set dport_   0
+  
++ Agent/OLSR set sport_	0
++ Agent/OLSR set dport_	0
++ 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/tcl/lib/ns-default.tcl ns-2.33/tcl/lib/ns-default.tcl
+*** ns-2.33-ORIG/tcl/lib/ns-default.tcl	Wed Jun 17 11:58:40 2009
+--- ns-2.33/tcl/lib/ns-default.tcl	Thu Jun 18 09:06:25 2009
+***************
+*** 1362,1367 ****
+--- 1362,1375 ----
+  Agent/MIPMH set mask_ [AddrParams set ALL_BITS_SET]
+  Agent/MIPMH set reg_lifetime_ 2
+   
++ # Defaults defined for UM-OLSR
++ Agent/OLSR set debug_       false
++ Agent/OLSR set use_mac_     false
++ Agent/OLSR set willingness_ 3
++ Agent/OLSR set hello_ival_  2
++ Agent/OLSR set tc_ival_     5
++ Agent/OLSR set mid_ival_    5
++ 
+  # Intitialization for directed diffusion : Chalermek
+  Agent/Diff_Sink set packetSize_ 512
+  Agent/Diff_Sink set interval_   0.5
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/tcl/lib/ns-lib.tcl ns-2.33/tcl/lib/ns-lib.tcl
+*** ns-2.33-ORIG/tcl/lib/ns-lib.tcl	Wed Jun 17 11:58:40 2009
+--- ns-2.33/tcl/lib/ns-lib.tcl	Thu Jun 18 09:07:32 2009
+***************
+*** 630,635 ****
+--- 630,638 ----
+  		    AODV {
+  			    set ragent [$self create-aodv-agent $node]
+  		    }
++ 		    OLSR {
++ 			    set ragent [$self create-olsr-agent $node]
++ 		    }
+  		    TORA {
+  			    Simulator set IMEPFlag_ ON
+  			    set ragent [$self create-tora-agent $node]
+***************
+*** 850,855 ****
+--- 853,866 ----
+          return $ragent
+  }
+  
++ Simulator instproc create-olsr-agent { node } {
++ 	#  Create UM-OLSR routing agent
++ 	set ragent [new Agent/OLSR [$node node-addr]]
++ 	$self at 0.0 "$ragent start"
++ 	$node set ragent_ $ragent
++ 	return $ragent
++ }
++ 
+  Simulator instproc use-newtrace {} {
+  	Simulator set WirelessNewTrace_ 1
+  } 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/tcl/lib/ns-packet.tcl ns-2.33/tcl/lib/ns-packet.tcl
+*** ns-2.33-ORIG/tcl/lib/ns-packet.tcl	Wed Jun 17 11:58:40 2009
+--- ns-2.33/tcl/lib/ns-packet.tcl	Thu Jun 18 09:03:43 2009
+***************
+*** 167,172 ****
+--- 167,173 ----
+          MIP 	# Mobile IP, mobile/mip-reg.cc
+  	Smac 	# Sensor-MAC
+  	TORA 	# routing protocol for ad-hoc networks
++ 	OLSR	# routing protocol for ad-hoc networks
+  # Other:
+  	Encap 	# common/encap.cc
+          IPinIP 	# IP encapsulation 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/trace/cmu-trace.cc ns-2.33/trace/cmu-trace.cc
+*** ns-2.33-ORIG/trace/cmu-trace.cc	Wed Jun 17 11:58:42 2009
+--- ns-2.33/trace/cmu-trace.cc	Thu Jun 18 09:03:43 2009
+***************
+*** 51,56 ****
+--- 51,57 ----
+  #include <tora/tora_packet.h> //TORA
+  #include <imep/imep_spec.h>         // IMEP
+  #include <aodv/aodv_packet.h> //AODV
++ #include <olsr/OLSR_pkt.h> // UM-OLSR
+  #include <cmu-trace.h>
+  #include <mobilenode.h>
+  #include <simulator.h>
+***************
+*** 944,949 ****
+--- 945,1025 ----
+  }
+  
+  void
++ CMUTrace::format_olsr(Packet *p, int offset)
++ {
++ 	OLSR_pkt* op = PKT_OLSR(p);
++ 
++ 	if (pt_->tagged()) {
++ 		sprintf(pt_->buffer() + offset,
++ 			"-olsr:n %d -olsr:s %d ",
++ 			op->count,
++ 			op->pkt_seq_num());
++ 
++ 		int len = strlen(pt_->buffer());
++ 		for (int i = 0; i < op->count; i++) {
++ 			const char *s;
++ 			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++ 				s = "-olsr:t HELLO -olsr:o %d -olsr:h %d -olsr:ms %d ";
++ 			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++ 				s = "-olsr:t TC -olsr:o %d -olsr:h %d -olsr:ms %d ";
++ 			else
++ 				s = "-olsr:t UNKNOWN -olsr:o %d -olsr:h %d -olsr:ms %d ";
++ 			sprintf(pt_->buffer() + len, s,
++ 				op->msg(i).orig_addr(),
++ 				op->msg(i).hop_count(),
++ 				op->msg(i).msg_seq_num());
++ 			len = strlen(pt_->buffer());
++ 		}
++ 	}
++ 	else if (newtrace_) {
++ 		sprintf(pt_->buffer() + offset,
++ 			"-P olsr -Pn %d -Ps %d ",
++ 			op->count,
++ 			op->pkt_seq_num());
++ 
++ 		int len = strlen(pt_->buffer());
++ 		for (int i = 0; i < op->count; i++) {
++ 			const char *s;
++ 			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++ 				s = "[-Pt HELLO -Po %d -Ph %d -Pms %d] ";
++ 			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++ 				s = "[-Pt TC -Po %d -Ph %d -Pms %d] ";
++ 			else
++ 				s = "[-Pt UNKNOWN -Po %d -Ph %d -Pms %d] ";
++ 			sprintf(pt_->buffer() + len, s,
++ 				op->msg(i).orig_addr(),
++ 				op->msg(i).hop_count(),
++ 				op->msg(i).msg_seq_num());
++ 			len = strlen(pt_->buffer());
++ 		}
++ 	}
++ 	else {
++ 		sprintf(pt_->buffer() + offset,
++ 			"[%d %d ",
++ 			op->count,
++ 			op->pkt_seq_num());
++ 
++ 		int len = strlen(pt_->buffer());
++ 		for (int i = 0; i < op->count; i++) {
++ 			const char *s;
++ 			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++ 				s = "[HELLO %d %d %d]";
++ 			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++ 				s = "[TC %d %d %d]";
++ 			else
++ 				s = "[UNKNOWN %d %d %d]";
++ 			sprintf(pt_->buffer() + len, s,
++ 				op->msg(i).orig_addr(),
++ 				op->msg(i).hop_count(),
++ 				op->msg(i).msg_seq_num());
++ 			len = strlen(pt_->buffer());
++ 		}
++ 
++ 		sprintf(pt_->buffer() + len, "]");
++ 	}
++ }
++ 
++ void
+  CMUTrace::nam_format(Packet *p, int offset)
+  {
+  	Node* srcnode = 0 ;
+***************
+*** 1209,1214 ****
+--- 1285,1293 ----
+  		case PT_AODV:
+  			format_aodv(p, offset);
+  			break;
++ 		case PT_OLSR:
++ 			format_olsr(p, offset);
++ 			break;
+  		case PT_TORA:
+                          format_tora(p, offset);
+                          break;
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.33-ORIG/trace/cmu-trace.h ns-2.33/trace/cmu-trace.h
+*** ns-2.33-ORIG/trace/cmu-trace.h	Wed Jun 17 11:58:42 2009
+--- ns-2.33/trace/cmu-trace.h	Thu Jun 18 09:08:47 2009
+***************
+*** 159,164 ****
+--- 159,165 ----
+  	void	format_tora(Packet *p, int offset);
+          void    format_imep(Packet *p, int offset);
+          void    format_aodv(Packet *p, int offset);
++         void    format_olsr(Packet *p, int offset);
+  
+  	// This holds all the tracers added at run-time
+  	static PacketTracer *pktTrc_;

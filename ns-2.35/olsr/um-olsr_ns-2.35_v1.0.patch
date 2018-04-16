@@ -1,0 +1,243 @@
+diff --git a/Makefile.in b/Makefile.in
+index 2e6ff5f..bee8d60 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -277,6 +277,7 @@ OBJ_CC = \
+ 	aodv/aodv_rtable.o aodv/aodv_rqueue.o \
+ 	aomdv/aomdv_logs.o aomdv/aomdv.o \
+ 	aomdv/aomdv_rtable.o aomdv/aomdv_rqueue.o \
++	olsr/OLSR.o olsr/OLSR_state.o olsr/OLSR_rtable.o olsr/OLSR_printer.o \
+ 	puma/puma.o \
+ 	mdart/mdart_adp.o mdart/mdart_dht.o mdart/mdart_ndp.o \
+ 	mdart/mdart_neighbor.o mdart/mdart_queue.o mdart/mdart_table.o \
+diff --git a/common/packet.h b/common/packet.h
+index 31bc393..db3f634 100644
+--- a/common/packet.h
++++ b/common/packet.h
+@@ -199,8 +199,11 @@ static const packet_t PT_DCCP_RESET = 71;
+         // M-DART packets
+ static const packet_t PT_MDART = 72;
+ 	
++        // UM-OLSR packet
++static const packet_t PT_OLSR = 73;
++
+         // insert new packet types here
+-static packet_t       PT_NTYPE = 73; // This MUST be the LAST one
++static packet_t       PT_NTYPE = 74; // This MUST be the LAST one
+ 
+ enum packetClass
+ {
+@@ -417,6 +420,9 @@ public:
+ 		name_[PT_DCCP_CLOSEREQ]="DCCP_CloseReq";
+ 		name_[PT_DCCP_RESET]="DCCP_Reset";
+ 
++		// UM-OLSR patch
++		name_[PT_OLSR]= "OLSR";
++
+ 		name_[PT_NTYPE]= "undefined";
+ 	}
+ 	static int addPacket(char *name);
+diff --git a/queue/priqueue.cc b/queue/priqueue.cc
+index 3893035..d18abee 100644
+--- a/queue/priqueue.cc
++++ b/queue/priqueue.cc
+@@ -92,6 +92,7 @@ PriQueue::recv(Packet *p, Handler *h)
+                 case PT_AODV:
+ 		case PT_AOMDV:
+ 		case PT_MDART:
++		case PT_OLSR:
+ 			recvHighPriority(p, h);
+                         break;
+ 
+diff --git a/tcl/lib/ns-agent.tcl b/tcl/lib/ns-agent.tcl
+index 4bcbb90..4a623ef 100644
+--- a/tcl/lib/ns-agent.tcl
++++ b/tcl/lib/ns-agent.tcl
+@@ -197,3 +197,7 @@ Agent/AOMDV set sport_   0
+ Agent/AOMDV set dport_   0
+ Agent/AOMDV set aomdv_prim_alt_path_len_diff_ 1
+ Agent/AOMDV set aomdv_max_paths_ 3
++
++Agent/OLSR set sport_   0
++Agent/OLSR set dport_   0
++
+diff --git a/tcl/lib/ns-default.tcl b/tcl/lib/ns-default.tcl
+index 56ee34f..1dfa7c0 100644
+--- a/tcl/lib/ns-default.tcl
++++ b/tcl/lib/ns-default.tcl
+@@ -1367,6 +1367,14 @@ Agent/MIPMH set reg_rtx_ 0.5
+ Agent/MIPMH set shift_ 0
+ Agent/MIPMH set mask_ [AddrParams set ALL_BITS_SET]
+ Agent/MIPMH set reg_lifetime_ 2
++
++# Defaults defined for UM-OLSR
++Agent/OLSR set debug_       false
++Agent/OLSR set use_mac_     false
++Agent/OLSR set willingness_ 3
++Agent/OLSR set hello_ival_  2
++Agent/OLSR set tc_ival_     5
++Agent/OLSR set mid_ival_    5
+  
+ # Intitialization for directed diffusion : Chalermek
+ Agent/Diff_Sink set packetSize_ 512
+diff --git a/tcl/lib/ns-lib.tcl b/tcl/lib/ns-lib.tcl
+index af26e35..36fb002 100644
+--- a/tcl/lib/ns-lib.tcl
++++ b/tcl/lib/ns-lib.tcl
+@@ -633,6 +633,9 @@ Simulator instproc create-wireless-node args {
+ 		    AOMDV {
+ 			    set ragent [$self create-aomdv-agent $node]
+ 		    }
++                    OLSR {
++                            set ragent [$self create-olsr-agent $node]
++                    }
+ 		    MDART {
+ 			    set ragent [$self create-mdart-agent $node]
+ 		    }
+@@ -883,6 +886,15 @@ Simulator instproc create-mdart-agent { node } {
+         return $ragent
+ }
+ 
++Simulator instproc create-olsr-agent { node } {
++	#  Create UM-OLSR routing agent
++	set ragent [new Agent/OLSR [$node node-addr]]
++	$self at 0.0 "$ragent start"
++	$node set ragent_ $ragent
++	return $ragent
++}
++
++
+ Simulator instproc use-newtrace {} {
+ 	Simulator set WirelessNewTrace_ 1
+ } 
+diff --git a/tcl/lib/ns-packet.tcl b/tcl/lib/ns-packet.tcl
+index 5ba0d54..237ceb7 100644
+--- a/tcl/lib/ns-packet.tcl
++++ b/tcl/lib/ns-packet.tcl
+@@ -179,6 +179,7 @@ set protolist {
+ 	MDART 	# routing protocol for ad-hoc networks
+ 	# AOMDV patch
+ 	AOMDV
++	OLSR	# routing protocol for ad-hoc networks
+ # Other:
+ 	Encap 	# common/encap.cc
+         IPinIP 	# IP encapsulation 
+diff --git a/trace/cmu-trace.cc b/trace/cmu-trace.cc
+index add0f1d..24d271b 100644
+--- a/trace/cmu-trace.cc
++++ b/trace/cmu-trace.cc
+@@ -54,6 +54,7 @@
+ #include <aomdv/aomdv_packet.h>
+ #include <mdart/mdart_packet.h>
+ #include <mdart/mdart_function.h>
++#include <olsr/OLSR_pkt.h>
+ #include <cmu-trace.h>
+ #include <mobilenode.h>
+ #include <simulator.h>
+@@ -1167,6 +1168,82 @@ CMUTrace::format_mdart(Packet *p, int offset)
+ 	}
+ }
+ 
++
++void
++CMUTrace::format_olsr(Packet *p, int offset)
++{
++	OLSR_pkt* op = PKT_OLSR(p);
++
++	if (pt_->tagged()) {
++		sprintf(pt_->buffer() + offset,
++			"-olsr:n %d -olsr:s %d ",
++			op->count,
++			op->pkt_seq_num());
++
++		int len = strlen(pt_->buffer());
++		for (int i = 0; i < op->count; i++) {
++			const char *s;
++			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++				s = "-olsr:t HELLO -olsr:o %d -olsr:h %d -olsr:ms %d ";
++			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++				s = "-olsr:t TC -olsr:o %d -olsr:h %d -olsr:ms %d ";
++			else
++				s = "-olsr:t UNKNOWN -olsr:o %d -olsr:h %d -olsr:ms %d ";
++			sprintf(pt_->buffer() + len, s,
++				op->msg(i).orig_addr(),
++				op->msg(i).hop_count(),
++				op->msg(i).msg_seq_num());
++			len = strlen(pt_->buffer());
++		}
++	}
++	else if (newtrace_) {
++		sprintf(pt_->buffer() + offset,
++			"-P olsr -Pn %d -Ps %d ",
++			op->count,
++			op->pkt_seq_num());
++
++		int len = strlen(pt_->buffer());
++		for (int i = 0; i < op->count; i++) {
++			const char *s;
++			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++				s = "[-Pt HELLO -Po %d -Ph %d -Pms %d] ";
++			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++				s = "[-Pt TC -Po %d -Ph %d -Pms %d] ";
++			else
++				s = "[-Pt UNKNOWN -Po %d -Ph %d -Pms %d] ";
++			sprintf(pt_->buffer() + len, s,
++				op->msg(i).orig_addr(),
++				op->msg(i).hop_count(),
++				op->msg(i).msg_seq_num());
++			len = strlen(pt_->buffer());
++		}
++	}
++	else {
++		sprintf(pt_->buffer() + offset,
++			"[%d %d ",
++			op->count,
++			op->pkt_seq_num());
++
++		int len = strlen(pt_->buffer());
++		for (int i = 0; i < op->count; i++) {
++			const char *s;
++			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++				s = "[HELLO %d %d %d]";
++			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++				s = "[TC %d %d %d]";
++			else
++				s = "[UNKNOWN %d %d %d]";
++			sprintf(pt_->buffer() + len, s,
++				op->msg(i).orig_addr(),
++				op->msg(i).hop_count(),
++				op->msg(i).msg_seq_num());
++			len = strlen(pt_->buffer());
++		}
++
++		sprintf(pt_->buffer() + len, "]");
++	}
++}
++
+ void
+ CMUTrace::nam_format(Packet *p, int offset)
+ {
+@@ -1426,6 +1503,11 @@ void CMUTrace::format(Packet* p, const char *why)
+ 		case PT_AOMDV:
+ 			format_aomdv(p, offset);
+ 			break;
++		// OLSR patch
++		case PT_OLSR:
++			format_olsr(p, offset);
++			break;
++
+ 		case PT_TORA:
+                         format_tora(p, offset);
+                         break;
+diff --git a/trace/cmu-trace.h b/trace/cmu-trace.h
+index ecfaa1d..61efa59 100644
+--- a/trace/cmu-trace.h
++++ b/trace/cmu-trace.h
+@@ -161,6 +161,7 @@ private:
+         void    format_aodv(Packet *p, int offset);
+ 	void    format_aomdv(Packet *p, int offset);
+ 	void    format_mdart(Packet *p, int offset);
++	void    format_olsr(Packet *p, int offset);
+ 
+ 	// This holds all the tracers added at run-time
+ 	static PacketTracer *pktTrc_;

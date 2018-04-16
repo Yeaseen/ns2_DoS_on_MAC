@@ -1,0 +1,258 @@
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/Makefile.in ns-2.29/Makefile.in
+*** ns-2.29-ORIG/Makefile.in	Thu Jan  5 11:55:44 2006
+--- ns-2.29/Makefile.in	Thu Jan  5 11:46:41 2006
+***************
+*** 250,255 ****
+--- 250,256 ----
+  	dsr/simplecache.o dsr/sr_forwarder.o \
+  	aodv/aodv_logs.o aodv/aodv.o \
+  	aodv/aodv_rtable.o aodv/aodv_rqueue.o \
++ 	olsr/OLSR.o olsr/OLSR_state.o olsr/OLSR_rtable.o olsr/OLSR_printer.o \
+  	common/ns-process.o \
+  	satellite/satgeometry.o satellite/sathandoff.o \
+  	satellite/satlink.o satellite/satnode.o \
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/common/packet.h ns-2.29/common/packet.h
+*** ns-2.29-ORIG/common/packet.h	Thu Jan  5 11:55:44 2006
+--- ns-2.29/common/packet.h	Thu Jan  5 11:18:19 2006
+***************
+*** 166,172 ****
+  	
+  	// HDLC packet
+  	PT_HDLC,
+! 
+  	// insert new packet types here
+  	PT_NTYPE // This MUST be the LAST one
+  };
+--- 166,175 ----
+  	
+  	// HDLC packet
+  	PT_HDLC,
+! 	
+! 	// UM-OLSR packet
+! 	PT_OLSR,
+! 	
+  	// insert new packet types here
+  	PT_NTYPE // This MUST be the LAST one
+  };
+***************
+*** 263,268 ****
+--- 266,274 ----
+  		// XCP
+  		name_[PT_XCP]="xcp";
+  		
++ 		// UM-OLSR
++ 		name_[PT_OLSR]= "OLSR";
++ 		
+  		name_[PT_NTYPE]= "undefined";
+  	}
+  	const char* name(packet_t p) const { 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/queue/priqueue.cc ns-2.29/queue/priqueue.cc
+*** ns-2.29-ORIG/queue/priqueue.cc	Thu Jan  5 11:55:44 2006
+--- ns-2.29/queue/priqueue.cc	Thu Jan  5 11:20:05 2006
+***************
+*** 90,95 ****
+--- 90,96 ----
+  		case PT_MESSAGE:
+                  case PT_TORA:
+                  case PT_AODV:
++ 		case PT_OLSR:
+                          recvHighPriority(p, h);
+                          break;
+  
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/tcl/lib/ns-agent.tcl ns-2.29/tcl/lib/ns-agent.tcl
+*** ns-2.29-ORIG/tcl/lib/ns-agent.tcl	Thu Jan  5 11:55:44 2006
+--- ns-2.29/tcl/lib/ns-agent.tcl	Thu Jan  5 11:26:38 2006
+***************
+*** 192,194 ****
+--- 192,197 ----
+  Agent/AODV set sport_   0
+  Agent/AODV set dport_   0
+  
++ Agent/OLSR set sport_	0
++ Agent/OLSR set dport_	0
++ 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/tcl/lib/ns-default.tcl ns-2.29/tcl/lib/ns-default.tcl
+*** ns-2.29-ORIG/tcl/lib/ns-default.tcl	Thu Jan  5 11:55:44 2006
+--- ns-2.29/tcl/lib/ns-default.tcl	Thu Jan  5 11:21:26 2006
+***************
+*** 1369,1371 ****
+--- 1369,1380 ----
+  # Quick Start definitions end here
+  
+  Delayer set debug_ false
++ 
++ # Defaults defined for UM-OLSR
++ Agent/OLSR set debug_       false
++ Agent/OLSR set use_mac_     false
++ Agent/OLSR set willingness_ 3
++ Agent/OLSR set hello_ival_  2
++ Agent/OLSR set tc_ival_     5
++ Agent/OLSR set mid_ival_    5
++ 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/tcl/lib/ns-lib.tcl ns-2.29/tcl/lib/ns-lib.tcl
+*** ns-2.29-ORIG/tcl/lib/ns-lib.tcl	Thu Jan  5 11:55:44 2006
+--- ns-2.29/tcl/lib/ns-lib.tcl	Thu Jan  5 11:24:30 2006
+***************
+*** 612,617 ****
+--- 612,620 ----
+  	    AODV {
+  		    set ragent [$self create-aodv-agent $node]
+  	    }
++ 	    OLSR {
++ 		    set ragent [$self create-olsr-agent $node]
++ 	    }
+  	    TORA {
+  		    Simulator set IMEPFlag_ ON
+  		    set ragent [$self create-tora-agent $node]
+***************
+*** 828,833 ****
+--- 831,844 ----
+          return $ragent
+  }
+  
++ Simulator instproc create-olsr-agent { node } {
++ 	#  Create UM-OLSR routing agent
++ 	set ragent [new Agent/OLSR [$node node-addr]]
++ 	$self at 0.0 "$ragent start"
++ 	$node set ragent_ $ragent
++ 	return $ragent
++ }
++ 
+  Simulator instproc use-newtrace {} {
+  	Simulator set WirelessNewTrace_ 1
+  } 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/tcl/lib/ns-packet.tcl ns-2.29/tcl/lib/ns-packet.tcl
+*** ns-2.29-ORIG/tcl/lib/ns-packet.tcl	Thu Jan  5 11:55:44 2006
+--- ns-2.29/tcl/lib/ns-packet.tcl	Thu Jan  5 11:25:51 2006
+***************
+*** 166,171 ****
+--- 166,172 ----
+          MIP 	# Mobile IP, mobile/mip-reg.cc
+  	Smac 	# Sensor-MAC
+  	TORA 	# routing protocol for ad-hoc networks
++ 	OLSR	# routing protocol for ad-hoc networks
+  # Other:
+  	Encap 	# common/encap.cc
+          IPinIP 	# IP encapsulation 
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/trace/cmu-trace.cc ns-2.29/trace/cmu-trace.cc
+*** ns-2.29-ORIG/trace/cmu-trace.cc	Thu Jan  5 11:55:45 2006
+--- ns-2.29/trace/cmu-trace.cc	Thu Jan  5 11:43:39 2006
+***************
+*** 51,56 ****
+--- 51,57 ----
+  #include <tora/tora_packet.h> //TORA
+  #include <imep/imep_spec.h>         // IMEP
+  #include <aodv/aodv_packet.h> //AODV
++ #include <olsr/OLSR_pkt.h> // UM-OLSR
+  #include <cmu-trace.h>
+  #include <mobilenode.h>
+  #include <simulator.h>
+***************
+*** 881,886 ****
+--- 882,962 ----
+  }
+  
+  void
++ CMUTrace::format_olsr(Packet *p, int offset)
++ {
++ 	OLSR_pkt* op = PKT_OLSR(p);
++ 
++ 	if (pt_->tagged()) {
++ 		sprintf(pt_->buffer() + offset,
++ 			"-olsr:n %d -olsr:s %d ",
++ 			op->count,
++ 			op->pkt_seq_num());
++ 
++ 		int len = strlen(pt_->buffer());
++ 		for (int i = 0; i < op->count; i++) {
++ 			const char *s;
++ 			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++ 				s = "-olsr:t HELLO -olsr:o %d -olsr:h %d -olsr:ms %d ";
++ 			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++ 				s = "-olsr:t TC -olsr:o %d -olsr:h %d -olsr:ms %d ";
++ 			else
++ 				s = "-olsr:t UNKNOWN -olsr:o %d -olsr:h %d -olsr:ms %d ";
++ 			sprintf(pt_->buffer() + len, s,
++ 				op->msg(i).orig_addr(),
++ 				op->msg(i).hop_count(),
++ 				op->msg(i).msg_seq_num());
++ 			len = strlen(pt_->buffer());
++ 		}
++ 	}
++ 	else if (newtrace_) {
++ 		sprintf(pt_->buffer() + offset,
++ 			"-P olsr -Pn %d -Ps %d ",
++ 			op->count,
++ 			op->pkt_seq_num());
++ 
++ 		int len = strlen(pt_->buffer());
++ 		for (int i = 0; i < op->count; i++) {
++ 			const char *s;
++ 			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++ 				s = "[-Pt HELLO -Po %d -Ph %d -Pms %d] ";
++ 			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++ 				s = "[-Pt TC -Po %d -Ph %d -Pms %d] ";
++ 			else
++ 				s = "[-Pt UNKNOWN -Po %d -Ph %d -Pms %d] ";
++ 			sprintf(pt_->buffer() + len, s,
++ 				op->msg(i).orig_addr(),
++ 				op->msg(i).hop_count(),
++ 				op->msg(i).msg_seq_num());
++ 			len = strlen(pt_->buffer());
++ 		}
++ 	}
++ 	else {
++ 		sprintf(pt_->buffer() + offset,
++ 			"[%d %d ",
++ 			op->count,
++ 			op->pkt_seq_num());
++ 
++ 		int len = strlen(pt_->buffer());
++ 		for (int i = 0; i < op->count; i++) {
++ 			const char *s;
++ 			if (op->msg(i).msg_type() == OLSR_HELLO_MSG)
++ 				s = "[HELLO %d %d %d]";
++ 			else if (op->msg(i).msg_type() == OLSR_TC_MSG)
++ 				s = "[TC %d %d %d]";
++ 			else
++ 				s = "[UNKNOWN %d %d %d]";
++ 			sprintf(pt_->buffer() + len, s,
++ 				op->msg(i).orig_addr(),
++ 				op->msg(i).hop_count(),
++ 				op->msg(i).msg_seq_num());
++ 			len = strlen(pt_->buffer());
++ 		}
++ 
++ 		sprintf(pt_->buffer() + len, "]");
++ 	}
++ }
++ 
++ void
+  CMUTrace::nam_format(Packet *p, int offset)
+  {
+  	Node* srcnode = 0 ;
+***************
+*** 1144,1149 ****
+--- 1220,1228 ----
+  		case PT_AODV:
+  			format_aodv(p, offset);
+  			break;
++ 		case PT_OLSR:
++ 			format_olsr(p, offset);
++ 			break;
+  		case PT_TORA:
+                          format_tora(p, offset);
+                          break;
+diff --new-file --recursive --context=3 --minimal -x '*.[ao]' -x '*.nam' -x '*.tr' -x '*.cache' -x core -x '*.core' ns-2.29-ORIG/trace/cmu-trace.h ns-2.29/trace/cmu-trace.h
+*** ns-2.29-ORIG/trace/cmu-trace.h	Thu Jan  5 11:55:45 2006
+--- ns-2.29/trace/cmu-trace.h	Thu Jan  5 11:27:51 2006
+***************
+*** 133,138 ****
+--- 133,139 ----
+  	void	format_tora(Packet *p, int offset);
+          void    format_imep(Packet *p, int offset);
+          void    format_aodv(Packet *p, int offset);
++ 	void    format_olsr(Packet *p, int offset);
+  };
+  
+  #endif /* __cmu_trace__ */

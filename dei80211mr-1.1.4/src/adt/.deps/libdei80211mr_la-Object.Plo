@@ -1,0 +1,3 @@
+adt/libdei80211mr_la-Object.lo: adt/Object.cc /usr/include/stdc-predef.h
+
+/usr/include/stdc-predef.h:

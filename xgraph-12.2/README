@@ -1,0 +1,53 @@
+
+xgraph 12.1
+<http://www-mash.cs.berkeley.edu/vint/xgraph>
+
+distributed by the VINT project
+<http://netweb.usc.edu/vint/>
+
+ 
+WHAT'S XGRAPH?
+--------------
+
+Welcome to the VINT release of xgraph.
+Xgraph is an X-Windows application that includes:
+
+  - interactive plotting and graphing, by David Harrison of UC Berkeley
+  - animation and deritives, added by Paul Walker of NCSA
+  - portability and bug fixes, by the VINT project
+
+ 
+WHAT'S NEW IN 12.1?
+-------------------
+
+Release 12.1 is the first release by the VINT project.
+(Thanks to Paul Walker and NCSA for letting us take over maintenence.)
+This release includes several bug and portability fixes
+and now uses GNU configure instead of imake.
+
+If you already have a working xgraph, there's little need to upgrade.
+If you had trouble getting xgraph to build, this version should be
+easier to build.
+
+
+OTHER XGRAPH INFORMATION
+------------------------
+
+Xgraph web page:
+<http://www-mash.cs.berkeley.edu/xgraph>
+
+See the file "INSTALL" for installation instructions.
+
+Help about building xgraph and late breaking patches:
+<http://www-mash.cs.berkeley.edu/ns/ns-problems.html#xgraph>
+AFTER checking the above patches web page, the ns-users mailing list
+is appropriate for questions.  Information about the mailing list
+is at <http://www-mash.cs.berkeley.edu/ns/ns-lists.html>.
+
+We do not plan major feature enhancements to xgraph, but we do plan to
+incorporate portability fixes.  At this time we believe xgraph builds
+on Linux (RedHat 6.1), FreeBSD (3.x), and Solaris (2.5, 7).  Positive
+and negative information about other platforms is welcome.
+
+
+

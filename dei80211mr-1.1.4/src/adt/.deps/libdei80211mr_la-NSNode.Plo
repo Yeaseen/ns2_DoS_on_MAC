@@ -1,0 +1,10 @@
+adt/libdei80211mr_la-NSNode.lo: adt/NSNode.cc /usr/include/stdc-predef.h \
+ adt/NSNode.h adt/Position.h adt/Object.h
+
+/usr/include/stdc-predef.h:
+
+adt/NSNode.h:
+
+adt/Position.h:
+
+adt/Object.h:

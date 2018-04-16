@@ -1,0 +1,32 @@
+AC_INIT(otcl.c)
+
+#XXX
+V_PROG="otclsh"
+V_ALL="$V_PROG"
+V_SHM="-DUSE_SHM"
+
+builtin(include, ./conf/configure.in.fns)
+
+builtin(include, ./conf/configure.in.head)
+builtin(include, ./conf/configure.in.tcl)
+builtin(include, ./conf/configure.in.tk)
+builtin(include, ./conf/configure.in.x11)
+
+# These must follow configure.in.head because they mess
+# with $*.
+AC_PROG_RANLIB
+AC_PROG_INSTALL
+
+builtin(include, ./conf/configure.in.dynamic)
+#
+# decide where to install the shared library
+#
+
+INST_OLIBSH="${prefix}/lib"
+if test -d ${prefix}/shlib ; then
+  INST_OLIBSH="${prefix}/shlib"
+fi
+AC_SUBST(INST_OLIBSH)
+
+NS_FNS_TAIL
+builtin(include, ./conf/configure.in.tail)

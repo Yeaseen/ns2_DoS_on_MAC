@@ -1,0 +1,8 @@
+adt/libdei80211mr_la-Position.lo: adt/Position.cc \
+ /usr/include/stdc-predef.h adt/Position.h adt/Object.h
+
+/usr/include/stdc-predef.h:
+
+adt/Position.h:
+
+adt/Object.h:

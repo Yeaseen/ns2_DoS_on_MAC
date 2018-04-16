@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+<HEAD>
+   <TITLE>xgraph TODO list</TITLE>
+</HEAD>
+<BODY>
+
+<P>
+
+<H1>xgraph: TODO list</H1>
+
+
+<ul>
+  <li><strong>examples/bar.xg crash on FreeBSD</strong>
+  	<p>To reproduce: run "xgraph examples/bar.xg" in gdb:
+	<pre>
+(gdb) run examples/bar.xg
+Starting program: /usr/home/haoboy/src/vint/xgraph/xgraph examples/bar.xg
+
+Program received signal SIGFPE, Arithmetic exception.
+0x805b0c1 in EraseData (wi=0x806e908) at draw.c:759
+759                         barPixels = (int) ((PM_DBL("BarWidth") /
+(gdb) bt
+#0  0x805b0c1 in EraseData (wi=0x806e908) at draw.c:759
+#1  0x804a859 in main (argc=2, argv=0xbfbfd00c) at xgraph.c:247
+	</pre>
+	Platform: FreeBSD 3.3-RELEASE FreeBSD 3.3-RELEASE #0: Fri Nov 19 15:33:50 PST 1999
+
+  <p>
+  <li><strong>feature request</strong>
+       <p>(From Ed Seidel &lt;eseidel@aei-potsdam.mpg.de&gt;)
+       How 
+about a feature request:  do you know how to make it possible to 
+handle much larger data sets?  We have a problem when we try to use 
+it to graph data sets with more than some number of lines in the 
+file.  We run up against this all the time.
+       
+</ul>
+
+
