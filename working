@@ -1,0 +1,79 @@
+
+First do this on Home directory:
+
+https://gist.github.com/slashsBin/a383559dc1f683c7cd502af9fd39c3ab
+
+
+then validate project:
+
+https://teacher.buet.ac.bd/ashikur/ns2/
+
+
+
+Go to:
+
+cd ~/Desktop
+
+create a file named example.tcl
+
+edit on that file: puts "Hello ns2"
+
+then run this:
+
+ns example.tcl
+
+
+
+
+How to deal with ns2 ?
+1.
+
+First u have to create a Network topology. In that topology there would be some nodes with specific co-ordination on 2D or 3D.
+
+to do this:
+
+go to:  ~ns-allinone-2.35/ns-2.35/indep-utils/cmu-scen-gen/setdest 
+
+then ./setdest command to see versions. 
+
+./setdest -v 1 -n 5 -t 30 -p 30 -x 600 -y 400 > scn
+
+then 
+
+2.
+
+CBR= constant bit rate traffic jam : Actually design the connection who is the sender and who is receiver.
+
+go there,
+
+cd ~ns-allinone-2.31/ns-2.31/indep-utils/cmu-scen-gen
+
+then command:
+
+ns cbrgen.tcl -type cbr -nn 5 -seed 1 -mc 10 -rate .25 > cbr-exp1 
+
+then edit cbr-exp1
+
+
+copy these files scn,cbr-exp1 to Desktop 
+
+
+3.
+
+the Trace generation:
+
+download a sample tcl file from  
+https://teacher.buet.ac.bd/ashikur/ns2/
+ 
+
+ last section , then edit this with avobe files.
+
+ then copy that to Desktop
+
+ run command line:
+
+ ns downloadedTCLfile.tcl
+ 
+
+
+
