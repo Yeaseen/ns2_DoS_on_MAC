@@ -307,6 +307,8 @@ BackoffTimer::start(int cw, int idle, double difs)
 	else {
 		assert(rtime + difs_wait >= 0.0);
 		s.schedule(this, &intr, rtime + difs_wait);
+
+		//schedule a event after given delay time(random time of slot time + DIFS time)
 	}
 }
 
@@ -319,15 +321,15 @@ BackoffTimer::pause()
 	//the caculation below make validation pass for linux though it
 	// looks dummy
 
-	double st = s.clock();
+	double st = s.clock(); // getting currnet clock time
 	
 
-	double rt = stime + difs_wait;
-	double sr = st - rt;
-	double mst = (mac->phymib_.getSlotTime());
+	double rt = stime + difs_wait; //backoff starting time + difs_wait
+	double sr = st - rt;  //remaining time to expire the backoff timers instance
+	double mst = (mac->phymib_.getSlotTime());   
 
 	
-        int slots = int (sr/mst);
+        int slots = int (sr/mst);   
 	
 	
 	if(slots < 0)
@@ -341,7 +343,7 @@ BackoffTimer::pause()
 
 	difs_wait = 0.0;
 
-	s.cancel(&intr);
+	s.cancel(&intr); 
 }
 
 

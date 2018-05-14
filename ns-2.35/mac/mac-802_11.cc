@@ -628,9 +628,12 @@ Mac802_11::tx_resume()
 					mhDefer_.start(phymib_.getDIFS() + 
 						       rTime);
 				}
-                        } else {
+                      
+            } 
+
+            else {
 				mhDefer_.start(phymib_.getSIFS());
-                        }
+            }
 		}
 	} else if(callback_) {
 		Handler *h = callback_;
@@ -1071,6 +1074,10 @@ Mac802_11::sendRTS(int dst)
 	/*
 	 *  If the size of the packet is larger than the
 	 *  RTSThreshold, then perform the RTS/CTS exchange.
+
+	 if packet size is less than rtsthreshold, destroy packet crated for RTS, return
+	 if rcv dest is broadcast, destroy packet crated for RTS, return
+
 	 */
 	if( (u_int32_t) HDR_CMN(pktTx_)->size() < macmib_.getRTSThreshold() ||
             (u_int32_t) dst == MAC_BROADCAST) {
@@ -1080,7 +1087,7 @@ Mac802_11::sendRTS(int dst)
 
 	ch->uid() = 0;
 	ch->ptype() = PT_MAC;
-	ch->size() = phymib_.getRTSlen();
+	ch->size() = phymib_.getRTSlen(); //set RTS packet size 
 	ch->iface() = -2;
 	ch->error() = 0;
 
@@ -1249,7 +1256,8 @@ Mac802_11::sendDATA(Packet *p)
 		ch->txtime() = txtime(ch->size(), dataRate_);
 		
 		dh->dh_duration = usec(txtime(phymib_.getACKlen(), basicRate_)
-				       + phymib_.getSIFS());
+				       + phymib_.getSIFS());  //after sending data to NAV finishing time, duration for storing the data
+
 
 
 
@@ -1539,6 +1547,8 @@ Mac802_11::send(Packet *p, Handler *h)
 				 * need to reset the Defer timer.
 				 */
 				if (bugFix_timer_) {
+					//cw= contention window
+					//backoff timer counts down from random of slot time + DIFS 
 					 mhBackoff_.start(cw_, is_idle(), 
 							  phymib_.getDIFS());
 				}
@@ -1549,7 +1559,8 @@ Mac802_11::send(Packet *p, Handler *h)
 						       rTime);
 				}
 			} 
-		} else {
+		} 
+		else {
 			/*
 			 * If the medium is NOT IDLE, then we start
 			 * the backoff timer.
@@ -1836,7 +1847,7 @@ Mac802_11::recvRTS(Packet *p)
  * txtime()	- pluck the precomputed tx time from the packet header
  */
 double
-Mac802_11::txtime(Packet *p)
+Mac802_11:txtime(Packet *p)
 {
 	struct hdr_cmn *ch = HDR_CMN(p);
 	double t = ch->txtime();

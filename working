@@ -36,7 +36,7 @@ go to:  ~ns-allinone-2.35/ns-2.35/indep-utils/cmu-scen-gen/setdest
 
 then ./setdest command to see versions. 
 
-./setdest -v 1 -n 5 -t 30 -p 30 -x 600 -y 400 > scn
+./setdest -v 1 -n 5 -M 15 -t 20 -p 30 -x 600 -y 400 > scn
 
 then 
 
