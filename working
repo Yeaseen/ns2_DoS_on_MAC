@@ -70,6 +70,8 @@ https://teacher.buet.ac.bd/ashikur/ns2/
 
  then copy that to Desktop
 
+ u can get these files in the wirelessRoutingFiles folder. 
+
  run command line:
 
  ns downloadedTCLfile.tcl
