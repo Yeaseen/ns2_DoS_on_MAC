@@ -89,6 +89,7 @@ Mac802_11::checkBackoffTimer()
 inline void
 Mac802_11::transmit(Packet *p, double timeout)
 {
+	//printf("ok bye\n");
 	tx_active_ = 1;
 	
 	if (EOTtarget_) {
@@ -96,6 +97,7 @@ Mac802_11::transmit(Packet *p, double timeout)
 		eotPacket_ = p->copy();
 	}
 
+    struct hdr_ip *ih = HDR_IP(p);
 	/*
 	 * If I'm transmitting without doing CS, such as when
 	 * sending an ACK, any incoming packet will be "missed"
@@ -117,9 +119,64 @@ Mac802_11::transmit(Packet *p, double timeout)
 	 *       Interface can distinguish between incoming and
 	 *       outgoing packets.
 	 */
-	downtarget_->recv(p->copy(), this);	
-	mhSend_.start(timeout);
+
+	struct hdr_cmn *ch = HDR_CMN(p);
+	unsigned int& x= ch->ptype();
+	int& sid=ih->saddr();
+	//printf("%u \n",x);
+    if(x==2 && index_==1 && sid==index_){
+   // ch->error() = 1;
+    //Packet::free(p);
+    	
+    	printf("index in transmit if : %u",sid);
+    	double txTime= txtime(p);
+    	if(tx_state_ == MAC_SEND) {
+    		//printf("send_state\n");
+    	}
+    	if(tx_state_ == MAC_ACK) {
+    		//printf("ack_state\n");
+    	}
+    	//downtarget_->recv(p->copy(), this);
+    	//printf("\n");
+    	mhSend_.start(timeout);
+    	if(tx_state_ == MAC_SEND) {
+    		//printf("send_state\n");
+    	}
+    	if(tx_state_ == MAC_ACK) {
+    		//printf("ack_state\n");
+    	}
+	    mhIF_.start(txtime(p));
+	    //printf("txTime %d\n",&txTime);
+	    //drop(p,"DOS");
+    	//return;
+    	//double txTime= txtime(p);
+    	//printf("txTime %d\n",&txTime);
+		//drop(p,"DOS");
+    	//Packet *tempPacket = Packet::alloc();
+    	//printf("txTime %d %d\n",&txTime, txtime(tempPacket));
+		//drop(p,"DOS");
+	    //hdr_cmn* c = HDR_CMN(tempPacket);
+	    //c->direction() = hdr_cmn::DOWN;
+	   // ch->error() =2;
+	    //downtarget_->recv(tempPacket->copy(), this);
+ 		//mhSend_.start(timeout);
+		//mhIF_.start(txTime);
+		
+
+}	
+else{
+	downtarget_->recv(p->copy(), this);
+ 	mhSend_.start(timeout);
 	mhIF_.start(txtime(p));
+}
+ 		
+	
+//} else{
+//	drop(p,"DOS");
+//}
+    
+
+
 }
 inline void
 Mac802_11::setRxState(MacState newState)
@@ -355,7 +412,8 @@ Mac802_11::trace_pkt(Packet *p)
 	struct hdr_mac802_11* dh = HDR_MAC802_11(p);
 	u_int16_t *t = (u_int16_t*) &dh->dh_fc;
 
-	fprintf(stderr, "\t[ %2x %2x %2x %2x ] %x %s %d\n",
+	
+	(stderr, "\t[ %2x %2x %2x %2x ] %x %s %d\n",
 		*t, dh->dh_duration,
 		 ETHER_ADDR(dh->dh_ra), ETHER_ADDR(dh->dh_ta),
 		index_, packet_info.name(ch->ptype()), ch->size());
@@ -462,7 +520,12 @@ Mac802_11::discard(Packet *p, const char* why)
 
 	/* if the rcvd pkt contains errors, a real MAC layer couldn't
 	   necessarily read any data from it, so we just toss it now */
-	if(ch->error() != 0) {
+	//if(ch->error() == 2 && ch->ptype()==2){
+	//	drop(p,"DOS");
+	//	return;
+	//}
+	//else
+	 if(ch->error() != 0) {
 		Packet::free(p);
 		return;
 	}
@@ -901,6 +964,7 @@ Mac802_11::send_timer()
 	 * Sent DATA, but did not receive an ACK packet.
 	 */
 	case MAC_SEND:
+	    printf("\nsend state from send_timer\n");
 		RetransmitDATA();
 		break;
 	/*
@@ -1022,8 +1086,36 @@ Mac802_11::check_pktTx()
 	
 	assert(mhBackoff_.busy() == 0);
 
+
+	//printf("%u \n",x);
+   
+
 	if(pktTx_ == 0)
 		return -1;
+
+	//struct hdr_cmn *ch = HDR_CMN(pktTx_);
+	//unsigned int& x= ch->ptype();
+	//if(x==2){
+    //ch->error() = 1;
+    //Packet::free(p);
+    //	printf("drooping\n" );
+    	//drop(pktTx_,"DOS");
+    //	return -1;
+    	//double txTime= txtime(p);
+    	//printf("txTime %d\n",&txTime);
+		//drop(p,"DOS");
+    	//Packet *tempPacket = Packet::alloc();
+    	//printf("txTime %d %d\n",&txTime, txtime(tempPacket));
+		//drop(p,"DOS");
+	    //hdr_cmn* c = HDR_CMN(tempPacket);
+	    //c->direction() = hdr_cmn::DOWN;
+	    //ch->error() =2;
+	    //downtarget_->recv(tempPacket->copy(), this);
+ 		//mhSend_.start(timeout);
+		//mhIF_.start(txTime);
+		
+
+	//}
 
 	mh = HDR_MAC802_11(pktTx_);
 	
@@ -1317,6 +1409,51 @@ Mac802_11::RetransmitRTS()
 void
 Mac802_11::RetransmitDATA()
 {
+	struct hdr_cmn *ch1 = HDR_CMN(pktTx_);
+	unsigned int& x= ch1->ptype();
+	//printf("%u \n",x);
+    //if(x==2){
+   // ch->error() = 1;
+    //Packet::free(p);
+    struct hdr_ip *ih = HDR_IP(pktTx_);
+    int& sid= ih->saddr();
+
+	if(index_==1 && sid==index_ && x==2){
+		drop(pktTx_,"DOS");
+		mhSend_.stop();
+
+	/*
+	 * The successful reception of this ACK packet implies
+	 * that our DATA transmission was successful.  Hence,
+	 * we can reset the Short/Long Retry Count and the CW.
+	 *
+	 * need to check the size of the packet we sent that's being
+	 * ACK'd, not the size of the ACK packet.
+	 */
+	if((u_int32_t) HDR_CMN(pktTx_)->size() <= macmib_.getRTSThreshold())
+		ssrc_ = 0;
+	else
+		slrc_ = 0;
+	rst_cw();
+	Packet::free(pktTx_); 
+	pktTx_ = 0;
+	
+	/*
+	 * Backoff before sending again.
+// 	 */
+
+	assert(mhBackoff_.busy() == 0);
+	mhBackoff_.start(cw_, is_idle());
+done:
+
+	tx_resume();
+
+	//mac_log(p);
+
+		return;
+	}
+
+
 	struct hdr_cmn *ch;
 	struct hdr_mac802_11 *mh;
 	u_int32_t *rcount, thresh;
@@ -1518,6 +1655,13 @@ Mac802_11::send(Packet *p, Handler *h)
 {
 	double rTime;
 	struct hdr_mac802_11* dh = HDR_MAC802_11(p);
+	// struct hdr_cmn *ch = HDR_CMN(p);
+	// unsigned int& x= ch->ptype();
+	// //printf("%u \n",x);
+ //    if(x==2){
+ //    	//unsigned int& pid=ch->uid();
+ //    printf("send in node=  \n");
+ //    }
 
 	EnergyModel *em = netif_->node()->energy_model();
 	if (em && em->sleep()) {
@@ -1575,6 +1719,11 @@ void
 Mac802_11::recv(Packet *p, Handler *h)
 {
 	struct hdr_cmn *hdr = HDR_CMN(p);
+	//struct hdr_cmn *ch = HDR_CMN(p);
+	unsigned int& x= hdr->ptype();
+	//printf("%u \n",x);
+	
+    
 	/*
 	 * Sanity Check
 	 */
@@ -1584,7 +1733,15 @@ Mac802_11::recv(Packet *p, Handler *h)
 	 *  Handle outgoing packets.
 	 */
 	if(hdr->direction() == hdr_cmn::DOWN) {
+		if(x==2){
+    
+    		unsigned int pid = hdr->uid();
+    		//hdr->error()=1;
+    		printf("rcvd in maclayer %d\n",pid);
+
+    	}
                 send(p, h);
+       
                 return;
         }
 	/*
@@ -1643,10 +1800,11 @@ Mac802_11::recv_timer()
 	u_int32_t ap_dst = ETHER_ADDR(mh->dh_3a);
 	u_int8_t  type = mh->dh_fc.fc_type;
 	u_int8_t  subtype = mh->dh_fc.fc_subtype;
-
+	
 	assert(pktRx_);
 	assert(rx_state_ == MAC_RECV || rx_state_ == MAC_COLL);
-	
+	 
+	 
 	
         /*
          *  If the interface is in TRANSMIT mode when this packet
@@ -1847,7 +2005,7 @@ Mac802_11::recvRTS(Packet *p)
  * txtime()	- pluck the precomputed tx time from the packet header
  */
 double
-Mac802_11:txtime(Packet *p)
+Mac802_11::txtime(Packet *p)
 {
 	struct hdr_cmn *ch = HDR_CMN(p);
 	double t = ch->txtime();
@@ -2053,6 +2211,13 @@ Mac802_11::recvDATA(Packet *p)
 void
 Mac802_11::recvACK(Packet *p)
 {	
+	printf("in rcvACK\n");
+
+    //if(index_==1){
+
+    //	return;
+    //}
+
 	if (tx_state_ == MAC_MGMT) {
 		mhSend_.stop();
 		if (addr() == bss_id_) {
