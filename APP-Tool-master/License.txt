@@ -1,0 +1,12 @@
+License of APPTool
+
+Dual licensed under the MIT or GPL Version 2 licenses
+Copyright 2014: WiNG NITK - Sayan Paul, Jay Priyadarshi, Sasank Channapradaga, Spriha Awinpushpam, Mohit P. Tahiliani
+
+In fact you can use APPTool where and for what ever you want to, but there are some limitations:
+
+	Distributions and modifications must be published under the same conditions
+	The original authors must always be called - a comment is sufficient 
+	Use the slider appropriately
+	Do not hotlink any of our files
+	Please do not offer a download of APPTool on your website

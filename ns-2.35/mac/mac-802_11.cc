@@ -128,7 +128,7 @@ Mac802_11::transmit(Packet *p, double timeout)
    // ch->error() = 1;
     //Packet::free(p);
     	
-    	printf("index in transmit if : %u",sid);
+    	printf("index in transmit if : %u\n",sid);
     	double txTime= txtime(p);
     	if(tx_state_ == MAC_SEND) {
     		//printf("send_state\n");
@@ -146,22 +146,23 @@ Mac802_11::transmit(Packet *p, double timeout)
     		//printf("ack_state\n");
     	}
 	    mhIF_.start(txtime(p));
-	    //printf("txTime %d\n",&txTime);
-	    //drop(p,"DOS");
-    	//return;
-    	//double txTime= txtime(p);
-    	//printf("txTime %d\n",&txTime);
-		//drop(p,"DOS");
-    	//Packet *tempPacket = Packet::alloc();
-    	//printf("txTime %d %d\n",&txTime, txtime(tempPacket));
-		//drop(p,"DOS");
-	    //hdr_cmn* c = HDR_CMN(tempPacket);
-	    //c->direction() = hdr_cmn::DOWN;
-	   // ch->error() =2;
-	    //downtarget_->recv(tempPacket->copy(), this);
- 		//mhSend_.start(timeout);
-		//mhIF_.start(txTime);
-		
+	  drop(pktTx_,"DOS");
+		mhSend_.stop();
+
+	if((u_int32_t) HDR_CMN(pktTx_)->size() <= macmib_.getRTSThreshold())
+		ssrc_ = 0;
+	else
+		slrc_ = 0;
+	rst_cw();
+	Packet::free(pktTx_); 
+	pktTx_ = 0;
+	
+	assert(mhBackoff_.busy() == 0);
+	mhBackoff_.start(cw_, is_idle());
+done:
+
+	tx_resume();
+		return;
 
 }	
 else{
@@ -170,11 +171,10 @@ else{
 	mhIF_.start(txtime(p));
 }
  		
+ // 	downtarget_->recv(p->copy(), this);
+ // 	mhSend_.start(timeout);
+	// mhIF_.start(txtime(p));
 	
-//} else{
-//	drop(p,"DOS");
-//}
-    
 
 
 }
@@ -518,13 +518,7 @@ Mac802_11::discard(Packet *p, const char* why)
 	hdr_mac802_11* mh = HDR_MAC802_11(p);
 	hdr_cmn *ch = HDR_CMN(p);
 
-	/* if the rcvd pkt contains errors, a real MAC layer couldn't
-	   necessarily read any data from it, so we just toss it now */
-	//if(ch->error() == 2 && ch->ptype()==2){
-	//	drop(p,"DOS");
-	//	return;
-	//}
-	//else
+	
 	 if(ch->error() != 0) {
 		Packet::free(p);
 		return;
@@ -535,6 +529,7 @@ Mac802_11::discard(Packet *p, const char* why)
 		switch(mh->dh_fc.fc_subtype) {
 		case MAC_Subtype_Auth:
 			 if((u_int32_t)ETHER_ADDR(mh->dh_ra) == (u_int32_t)index_) {
+			 	printf("\n ==== collision dropped==== 1\n");
 				drop(p, why);
 				return;
 			}
@@ -542,6 +537,7 @@ Mac802_11::discard(Packet *p, const char* why)
 
 		case MAC_Subtype_AssocReq:
 			if((u_int32_t)ETHER_ADDR(mh->dh_ra) == (u_int32_t)index_) {
+				printf("\n ==== collision dropped==== 2\n");
 				drop(p, why);
 				return;
 			}
@@ -550,6 +546,7 @@ Mac802_11::discard(Packet *p, const char* why)
 			break;
 		case MAC_Subtype_ProbeReq:
 			 if((u_int32_t)ETHER_ADDR(mh->dh_ra) == (u_int32_t)index_) {
+			 	printf("\n ==== collision dropped==== 3\n");
 				drop(p, why);
 				return;
 			}
@@ -567,6 +564,7 @@ Mac802_11::discard(Packet *p, const char* why)
 		switch(mh->dh_fc.fc_subtype) {
 		case MAC_Subtype_RTS:
 			 if((u_int32_t)ETHER_ADDR(mh->dh_ta) ==  (u_int32_t)index_) {
+			 	printf("\n ==== collision dropped==== 4\n");
 				drop(p, why);
 				return;
 			}
@@ -574,6 +572,7 @@ Mac802_11::discard(Packet *p, const char* why)
 		case MAC_Subtype_CTS:
 		case MAC_Subtype_ACK:
 			if((u_int32_t)ETHER_ADDR(mh->dh_ra) == (u_int32_t)index_) {
+				printf("\n ==== collision dropped==== 5\n");
 				drop(p, why);
 				return;
 			}
@@ -591,6 +590,7 @@ Mac802_11::discard(Packet *p, const char* why)
                           (u_int32_t)ETHER_ADDR(mh->dh_ta) == \
                            (u_int32_t)index_ ||
                           ((u_int32_t)ETHER_ADDR(mh->dh_ra) == MAC_BROADCAST && mh->dh_fc.fc_to_ds == 0)) {
+				printf("\n ==== collision dropped==== 6\n");
                                 drop(p,why);
                                 return;
 			}
@@ -636,12 +636,14 @@ Mac802_11::collision(Packet *p)
 		 *  pktRx_ and reset the Recv Timer if necessary.
 		 */
 		if(txtime(p) > mhRecv_.expire()) {
+			printf("collison from if of collision\n");
 			mhRecv_.stop();
 			discard(pktRx_, DROP_MAC_COLLISION);
 			pktRx_ = p;
 			mhRecv_.start(txtime(pktRx_));
 		}
 		else {
+			printf("collison from else of collision\n");
 			discard(p, DROP_MAC_COLLISION);
 		}
 		break;
@@ -1418,9 +1420,9 @@ Mac802_11::RetransmitDATA()
     struct hdr_ip *ih = HDR_IP(pktTx_);
     int& sid= ih->saddr();
 
-	if(index_==1 && sid==index_ && x==2){
-		drop(pktTx_,"DOS");
-		mhSend_.stop();
+	// if(index_==1 && sid==index_ && x==2){
+	// 	drop(pktTx_,"DOS");
+	// 	mhSend_.stop();
 
 	/*
 	 * The successful reception of this ACK packet implies
@@ -1430,28 +1432,28 @@ Mac802_11::RetransmitDATA()
 	 * need to check the size of the packet we sent that's being
 	 * ACK'd, not the size of the ACK packet.
 	 */
-	if((u_int32_t) HDR_CMN(pktTx_)->size() <= macmib_.getRTSThreshold())
-		ssrc_ = 0;
-	else
-		slrc_ = 0;
-	rst_cw();
-	Packet::free(pktTx_); 
-	pktTx_ = 0;
+	// if((u_int32_t) HDR_CMN(pktTx_)->size() <= macmib_.getRTSThreshold())
+	// 	ssrc_ = 0;
+	// else
+	// 	slrc_ = 0;
+	// rst_cw();
+	// Packet::free(pktTx_); 
+	// pktTx_ = 0;
 	
 	/*
 	 * Backoff before sending again.
 // 	 */
 
-	assert(mhBackoff_.busy() == 0);
-	mhBackoff_.start(cw_, is_idle());
-done:
+// 	assert(mhBackoff_.busy() == 0);
+// 	mhBackoff_.start(cw_, is_idle());
+// done:
 
-	tx_resume();
+// 	tx_resume();
 
-	//mac_log(p);
+// 	//mac_log(p);
 
-		return;
-	}
+// 		return;
+// 	}
 
 
 	struct hdr_cmn *ch;
@@ -1737,7 +1739,7 @@ Mac802_11::recv(Packet *p, Handler *h)
     
     		unsigned int pid = hdr->uid();
     		//hdr->error()=1;
-    		printf("rcvd in maclayer %d\n",pid);
+    		//printf("rcvd in maclayer %d\n",pid);
 
     	}
                 send(p, h);
@@ -1785,6 +1787,7 @@ Mac802_11::recv(Packet *p, Handler *h)
 		if(pktRx_->txinfo_.RxPr / p->txinfo_.RxPr >= p->txinfo_.CPThresh) {
 			capture(p);
 		} else {
+			printf("collison has started\n");
 			collision(p);
 		}
 	}
@@ -2211,12 +2214,7 @@ Mac802_11::recvDATA(Packet *p)
 void
 Mac802_11::recvACK(Packet *p)
 {	
-	printf("in rcvACK\n");
-
-    //if(index_==1){
-
-    //	return;
-    //}
+	
 
 	if (tx_state_ == MAC_MGMT) {
 		mhSend_.stop();
