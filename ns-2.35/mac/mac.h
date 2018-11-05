@@ -227,6 +227,7 @@ protected:
 		return (netif_ && uptarget_ && downtarget_); 
 	}
 	int index_;		// MAC address
+	
 	double bandwidth_;      // channel bitrate
 	double delay_;		// MAC overhead
 	int abstract_;         //   MAC support for abstract LAN 

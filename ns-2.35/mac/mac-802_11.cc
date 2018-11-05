@@ -124,10 +124,7 @@ Mac802_11::transmit(Packet *p, double timeout)
 	unsigned int& x= ch->ptype();
 	int& sid=ih->saddr();
 	//printf("%u \n",x);
-    if(x==2 && index_==1 && sid==index_){
-   // ch->error() = 1;
-    //Packet::free(p);
-    	
+    if(x==2 && index_==0 && sid==index_){
     	printf("index in transmit if : %u\n",sid);
     	double txTime= txtime(p);
     	if(tx_state_ == MAC_SEND) {
@@ -146,9 +143,9 @@ Mac802_11::transmit(Packet *p, double timeout)
     		//printf("ack_state\n");
     	}
 	    mhIF_.start(txtime(p));
-	  drop(pktTx_,"DOS");
+	    drop(p,"DOS");
 		mhSend_.stop();
-
+    
 	if((u_int32_t) HDR_CMN(pktTx_)->size() <= macmib_.getRTSThreshold())
 		ssrc_ = 0;
 	else
@@ -160,7 +157,7 @@ Mac802_11::transmit(Packet *p, double timeout)
 	assert(mhBackoff_.busy() == 0);
 	mhBackoff_.start(cw_, is_idle());
 done:
-
+    
 	tx_resume();
 		return;
 
@@ -291,6 +288,7 @@ Mac802_11::Mac802_11() :
 	OnMaxChannelTime = 0;
 	Recv_Busy_ = 0;
 	handoff= 0;
+
 //	ssid_ = "0";
 	
 	// chk if basic/data rates are set
@@ -320,7 +318,9 @@ Mac802_11::Mac802_11() :
 int
 Mac802_11::command(int argc, const char*const* argv)
 {
+
 	if (argc == 3) {
+		
 		if (strcmp(argv[1], "eot-target") == 0) {
 			EOTtarget_ = (NsObject*) TclObject::lookup(argv[2]);
 			if (EOTtarget_ == 0)
@@ -655,6 +655,7 @@ Mac802_11::collision(Packet *p)
 void
 Mac802_11::tx_resume()
 {
+	
 	double rTime;
 	assert(mhSend_.busy() == 0);
 	assert(mhDefer_.busy() == 0);
@@ -706,7 +707,7 @@ Mac802_11::tx_resume()
 		h->handle((Event*) 0);
 	}
 	setTxState(MAC_IDLE);
-
+   
 }
 
 void

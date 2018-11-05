@@ -34,11 +34,11 @@ pktNo = 0;
 	}
 #packet delivery ratio
 if(level == "AGT" && event == "s") {
-print " Generator Node id = " node_id;
+#print " Generator Node id = " node_id;
 pktNo++;
 }
 else if((level == "AGT") && (event == "r")) {
- print " Receiver Node id = " node_id;
+ #print " Receiver Node id = " node_id;
  receivedPackets++;
 }
  else if ((event == "d") && (level == "MAC") && (dos == "DOS")){
