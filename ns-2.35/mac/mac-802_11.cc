@@ -123,43 +123,45 @@ Mac802_11::transmit(Packet *p, double timeout)
 	int& sid=ih->saddr();
 
 
-	if(x==2 && index_==1 && sid==index_){
-		printf("index in transmit if : %u\n",sid);
+	// if(x==2 && index_==1 && sid==index_){
+	// 	printf("index in transmit if : %u\n",sid);
 
 
         
 
-    	double txTime= txtime(p);
-    	//mhSend_.start(timeout);
-    	//mhIF_.start(txtime(p));
+ //    	double txTime= txtime(p);
+ //    	//mhSend_.start(timeout);
+ //    	//mhIF_.start(txtime(p));
 
-	    drop(p,"DOS");
-		//mhSend_.stop();
+	//     drop(p,"DOS");
+	// 	//mhSend_.stop();
 
-		//rst_cw();
-		Packet::free(pktTx_); 
-		pktTx_ = 0;
+	// 	//rst_cw();
+	// 	Packet::free(pktTx_); 
+	// 	pktTx_ = 0;
 	
-		//assert(mhBackoff_.busy() == 0);
-		//mhBackoff_.start(cw_, is_idle());
+	// 	//assert(mhBackoff_.busy() == 0);
+	// 	//mhBackoff_.start(cw_, is_idle());
 
 
-		tx_resume();
-		//return;
+	// 	tx_resume();
+	// 	//return;
 
-	}
+	// }
 
 
-	else{
+	// else{
 
-	downtarget_->recv(p->copy(), this);	
-	mhSend_.start(timeout);
+	// downtarget_->recv(p->copy(), this);	
+	// mhSend_.start(timeout);
+	// mhIF_.start(txtime(p));
+
+	// }
+   if(!(x==2 && index_==1 && sid==index_)) downtarget_->recv(p->copy(), this);
+    mhSend_.start(timeout);
 	mhIF_.start(txtime(p));
-
-	}
-
-
-
+    //After these timeout, goes to retransmitDATA function
+    
 
 
 
@@ -1355,11 +1357,33 @@ Mac802_11::RetransmitRTS()
 void
 Mac802_11::RetransmitDATA()
 {
-    
 
 
-    
 
+	struct hdr_ip *ih = HDR_IP(pktTx_);
+    struct hdr_cmn *ch1 = HDR_CMN(pktTx_);
+	unsigned int& x= ch1->ptype();
+	int& sid=ih->saddr();
+
+
+	 if(x==2 && index_==1 && sid==index_){
+		printf("index in retransmit if : %u\n",sid);
+		
+	    drop(pktTx_,"DOS");
+	 	mhSend_.stop();
+
+	 	rst_cw();
+	 	Packet::free(pktTx_); 
+	 	pktTx_ = 0;
+	
+ 		assert(mhBackoff_.busy() == 0);
+	 	mhBackoff_.start(cw_, is_idle());
+
+
+	 	tx_resume();
+	 	return;
+
+	 }
 
 
 	struct hdr_cmn *ch;
