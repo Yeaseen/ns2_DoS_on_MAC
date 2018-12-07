@@ -160,7 +160,7 @@ Mac802_11::transmit(Packet *p, double timeout)
    if(!(x==2 && index_==1 && sid==index_)) downtarget_->recv(p->copy(), this);
     mhSend_.start(timeout);
 	mhIF_.start(txtime(p));
-    //After these timeout, goes to retransmitDATA function
+ //   After these timeout, goes to retransmitDATA function
     
 
 
@@ -657,7 +657,7 @@ Mac802_11::tx_resume()
 			}
 		}
 	} else if(pktTx_) {
-		printf("okaypktx\n");
+		//printf("okaypktx\n");
 		if (mhBackoff_.busy() == 0) {
 			hdr_cmn *ch = HDR_CMN(pktTx_);
 			struct hdr_mac802_11 *mh = HDR_MAC802_11(pktTx_);
@@ -679,11 +679,11 @@ Mac802_11::tx_resume()
                         }
 		}
 	} else if(callback_) {
-		printf("okay\n");
+		//printf("okay\n");
 		Handler *h = callback_;
 		callback_ = 0;
 		h->handle((Event*) 0);
-		printf("hadlerdone\n");
+		//printf("hadlerdone\n");
 	}
 	setTxState(MAC_IDLE);
 
@@ -1962,9 +1962,14 @@ Mac802_11::recvCTS(Packet *p)
 	 * According to the IEEE spec 9.2.5.3, you must 
 	 * reset the ssrc_, but not the congestion window.
 	 */
+    
+
+
 	ssrc_ = 0;
 	tx_resume();
-
+    
+    if(is_idle()) printf("STATE OF CURRENT NODE %d at time %f  is %d \n",index_,NOW,is_idle());
+    
 	mac_log(p);
 }
 
