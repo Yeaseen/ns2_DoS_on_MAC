@@ -364,6 +364,7 @@ class Mac802_11 : public Mac {
 	friend class NavTimer;
 	friend class RxTimer;
 	friend class TxTimer;
+	friend class SenseTimer;
 public:
 	Mac802_11();
 	void		recv(Packet *p, Handler *h);
@@ -386,6 +387,7 @@ protected:
 	void	recvHandler(void);
 	void	sendHandler(void);
 	void	txHandler(void);
+    void	senseHandler(void);
 
 private:
 	void	update_client_table(int num, int auth_status, int assoc_status);			
@@ -568,6 +570,7 @@ private:
 	BackoffTimer	mhBackoff_;	// backoff timer
 	BeaconTimer	mhBeacon_;	// Beacon Timer 
 	ProbeTimer	mhProbe_;	//Probe timer, 
+    SenseTimer mhSense_;  //Sense Timer
 
 	/* ============================================================
 	   Internal MAC State

@@ -373,3 +373,47 @@ BackoffTimer::resume(double difs)
 }
 
 
+/* ======================================================================
+   Sense Timer
+   ====================================================================== */
+void
+SenseTimer::handle(Event *)
+{
+	busy_ = 0;
+	paused_ = 0;
+	stime = 0.0;
+	rtime = 0.0;
+	wait = 0.0;
+
+	mac->senseHandler();
+}
+
+void
+SenseTimer::start(int cw, double difs)
+{
+	Scheduler &s = Scheduler::instance();
+
+	assert(busy_ == 0);
+
+	busy_ = 1;
+	paused_ = 0;
+	stime = s.clock();
+	wait = difs;
+	
+	if(cw!=0){
+		rtime = wait; //(Random::random() % cw) * mac->phymib_.getSlotTime()+wait;
+	}
+	else{
+		rtime = wait ;//+ mac->phymib_.getSlotTime();
+	}
+    #ifdef USE_SLOT_TIME
+	ROUND_TIME();
+#endif
+	assert(rtime  >= 0.0);
+	s.schedule(this, &intr, rtime);
+
+	//schedule a event after given delay time(random time of slot time + DIFS time)
+	
+}
+
+

@@ -137,5 +137,24 @@ public:
 	void	handle(Event *e);
 };
 
+
+
+//Channel Sensing timer 
+class SenseTimer : public MacTimer {
+public:
+	SenseTimer(Mac802_11 *m) : MacTimer(m), wait(0.0) {}
+	void	start(int cw,double difs);
+	void	handle(Event *e);
+private:
+	double	wait;
+};
+
+
+
+
+
+
+
+
 #endif /* __mac_timers_h__ */
 

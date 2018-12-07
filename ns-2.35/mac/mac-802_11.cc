@@ -241,7 +241,7 @@ MAC_MIB::MAC_MIB(Mac802_11 *parent)
 Mac802_11::Mac802_11() : 
 	Mac(), phymib_(this), macmib_(this), mhIF_(this), mhNav_(this), 
 	mhRecv_(this), mhSend_(this), 
-	mhDefer_(this), mhBackoff_(this), mhBeacon_(this), mhProbe_(this)
+	mhDefer_(this), mhBackoff_(this),mhSense_(this), mhBeacon_(this), mhProbe_(this)
 {
 	
 	nav_ = 0.0;
@@ -740,6 +740,26 @@ Mac802_11::backoffHandler()
 	if(check_pktTx() == 0)
 		return;
 }
+
+
+void
+Mac802_11::senseHandler()
+{
+	printf("Node  %d at time %f  finds chaneel  %d \n",index_,NOW,is_idle());
+	return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 void
 Mac802_11::BeaconHandler()
@@ -1968,7 +1988,7 @@ Mac802_11::recvCTS(Packet *p)
 	ssrc_ = 0;
 	tx_resume();
     
-    if(is_idle()) printf("STATE OF CURRENT NODE %d at time %f  is %d \n",index_,NOW,is_idle());
+    //if(is_idle()) printf("STATE OF CURRENT NODE %d at time %f  is %d \n",index_,NOW,is_idle());
     
 	mac_log(p);
 }
