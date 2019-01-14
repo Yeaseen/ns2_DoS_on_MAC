@@ -401,10 +401,12 @@ SenseTimer::start(int cw, double difs)
 	wait = difs;
 	
 	if(cw!=0){
-		rtime = wait; //(Random::random() % cw) * mac->phymib_.getSlotTime()+wait;
+		rtime =wait;//(Random::random() % cw) * mac->phymib_.getSlotTime()+
+		
 	}
 	else{
-		rtime = wait ;//+ mac->phymib_.getSlotTime();
+		rtime = wait;
+		//+mac->phymib_.getSlotTime();
 	}
     #ifdef USE_SLOT_TIME
 	ROUND_TIME();

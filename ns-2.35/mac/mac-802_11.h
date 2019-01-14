@@ -485,6 +485,7 @@ private:
 	void		tx_resume(void);
 
 	inline int	is_idle(void);
+	inline int	is_idle_on_NAV(void);
 
 	/*
 	 * Debugging Functions.
@@ -570,8 +571,9 @@ private:
 	BackoffTimer	mhBackoff_;	// backoff timer
 	BeaconTimer	mhBeacon_;	// Beacon Timer 
 	ProbeTimer	mhProbe_;	//Probe timer, 
-    SenseTimer mhSense_;  //Sense Timer
-
+    SenseTimer mhSenseRTS_;  //Sense Timer for rts
+    SenseTimer mhSenseCTS_;  //Sense Timer for cts
+    
 	/* ============================================================
 	   Internal MAC State
 	   ============================================================ */
