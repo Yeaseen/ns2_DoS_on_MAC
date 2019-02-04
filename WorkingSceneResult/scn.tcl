@@ -26,19 +26,7 @@ $node_(7) set X_ 0
 $node_(7) set Y_ 150
 $node_(7) set Z_ 0.000000000000
 
-$god_ set-dist 1 0 1
-$god_ set-dist 1 2 1
-$god_ set-dist 1 3 1
-$god_ set-dist 1 4 1
 
-$god_ set-dist 2 3 1
-$god_ set-dist 2 4 1
-$god_ set-dist 2 5 1
-
-$god_ set-dist 3 4 1
-$god_ set-dist 3 6 1
-
-$god_ set-dist 4 7 1
 # Destination Unreachables: 0
 #
 # Route Changes: 0

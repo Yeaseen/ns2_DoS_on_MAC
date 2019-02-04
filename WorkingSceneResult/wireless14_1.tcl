@@ -103,6 +103,8 @@ $ns_ node-config -adhocRouting $val(adhocRouting) \
                  -routerTrace ON \
                  -macTrace ON 
 
+
+
 #
 #  Create the specified number of nodes [$val(nn)] and "attach" them
 #  to the channel. 
