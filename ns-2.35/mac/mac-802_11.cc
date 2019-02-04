@@ -774,16 +774,16 @@ Mac802_11::senseHandler()
 {
 	printf("Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
 	
-	 // if(mhNav_.busy() && rx_state_==0 ){
+	  if(mhNav_.busy() && rx_state_==0 ){
 	
-	 // 	mhNav_.stop();
-	 // 	nav_=NOW;
+	  	mhNav_.stop();
+	  	nav_=NOW;
 	 	
-	 // 	printf("nav_== %lf\n", nav_ );
-	 // 	if(is_idle() && mhBackoff_.paused()){
-	 // 		mhBackoff_.resume(phymib_.getDIFS());
-	 // 	}
-  // }
+	  	printf("nav_== %lf\n", nav_ );
+	  	if(is_idle() && mhBackoff_.paused()){
+	  		mhBackoff_.resume(phymib_.getDIFS());
+	 	}
+   }
 				
 	return;
 }
@@ -1912,13 +1912,16 @@ Mac802_11::recv_timer()
 			       + txtime(phymib_.getCTSlen(), basicRate_)
 			       + phymib_.getSIFS()+txtime(phymib_.getACKlen(), basicRate_)
 				       + phymib_.getSIFS()));//* 1e-6;
-            int ccc=(Random::random() % (5+Random::random() % 5));
-            	printf("%d\n",ccc );
-            double rantime=(ccc*(datatime/10))* 1e-6;
-			printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
-				NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
+
+            int ccc=(Random::random() % 10);
+            
+            //printf("%d\n",ccc );
+            double rantime= t+(ccc*(datatime/10))* 1e-6;
+			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
+				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
 			
-			mhSenseRTS_.start(1,t);
+			if(mhSenseRTS_.busy()==0){mhSenseRTS_.start(1,rantime);
+			}
 		}
 		discard(pktRx_, "---");
 		goto done;
