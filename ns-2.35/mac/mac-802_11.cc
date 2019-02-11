@@ -772,14 +772,14 @@ Mac802_11::backoffHandler()
 void
 Mac802_11::senseHandler()
 {
-	printf("Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
+	//printf("Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
 	
-	  if(mhNav_.busy() && rx_state_==0 ){
+	  if(mhNav_.busy() && rx_state_== 0 ){
 	
 	  	mhNav_.stop();
-	  	nav_=NOW;
+	  	nav_= NOW;
 	 	
-	  	printf("nav_== %lf\n", nav_ );
+	  	printf("DoS attacker is= %d\n", globalSRC );
 	  	if(is_idle() && mhBackoff_.paused()){
 	  		mhBackoff_.resume(phymib_.getDIFS());
 	 	}
@@ -1833,45 +1833,60 @@ Mac802_11::recv_timer()
 	/*
 	 * IEEE 802.11 specs, section 9.2.5.6
 	 *	- update the NAV (Network Allocation Vector)
-	  */
+	 */
+
 	// if(index_ ==1 ){
 	// 	printf("=Node 1 received %d packet at time %f ==\n",subtype,NOW);
 	//     printf("%d\n", subtype);
 	// }
     
 
-
-     
-
-
 	if(dst != (u_int32_t)index_) {
+
+		if(subtype == MAC_Subtype_RTS){
+			
+			//double t = 2*phymib_.getSIFS()+txtime(phymib_.getCTSlen(), basicRate_);
+			double t=usec(phymib_.getSIFS()
+			       + txtime(phymib_.getCTSlen(), basicRate_)
+			       + phymib_.getSIFS()+(phymib_.getSIFS()))* 1e-6;
+			
+            double datatime=(mh->dh_duration - usec(phymib_.getSIFS()
+			       + txtime(phymib_.getCTSlen(), basicRate_)
+			       + phymib_.getSIFS()+txtime(phymib_.getACKlen(), basicRate_)
+				       + phymib_.getSIFS()));//* 1e-6;
+
+            int ccc=(Random::random() % 10);
+            
+            //printf("%d\n",ccc );
+            double rantime= t+(ccc*(datatime/10))* 1e-6;
+			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
+				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
+			src = ETHER_ADDR(mh->dh_ta);
+			//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
+			//mhSenseRTS_.start(1,rantime);
+			double now = Scheduler::instance().clock();
+			double navTime = mh->dh_duration * 1e-6;
+			
+			if(mhSenseRTS_.busy()==0){
+				//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
+				globalSRC=src;
+				mhSenseRTS_.start(1,rantime);
+				//mhSenseRTS_.setID(src);
+			}
+			else if(mhSenseRTS_.busy() && now+navTime>nav_){
+				//int slt=(Random::random() % 5);
+				//double newRantime=now+t+(datatime* 1e-6)-nav_;
+				//double rant=nav_ + (slt*(newRantime/5));
+				//mhSenseRTS_.stop();
+				//mhSenseRTS_.start(1,rant);
+				//printf("");
+				//printf("Sender src= %d at %lf and cuurentNode %d,nav=%lf handle= %lf end = %lf \n",src,NOW,index_,nav_,rant,NOW+navTime);
+			}
+		}
       
 		set_nav(mh->dh_duration);
-		// if(subtype == MAC_Subtype_RTS){
-			
-		// 	//double t = 2*phymib_.getSIFS()+txtime(phymib_.getCTSlen(), basicRate_);
-		// 	double t=usec(phymib_.getSIFS()
-		// 	       + txtime(phymib_.getCTSlen(), basicRate_)
-		// 	       + phymib_.getSIFS()+(phymib_.getSIFS()))* 1e-6;
-			
-  //           double datatime=(mh->dh_duration - usec(phymib_.getSIFS()
-		// 	       + txtime(phymib_.getCTSlen(), basicRate_)
-		// 	       + phymib_.getSIFS()+txtime(phymib_.getACKlen(), basicRate_)
-		// 		       + phymib_.getSIFS()));//* 1e-6;
-  //           int ccc=(Random::random() % 5);
-  //           	printf("%d\n",ccc );
-  //           double rantime=(ccc*(datatime/10))* 1e-6;
-		// 	printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
-		// 		NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
-			
-		// 	mhSenseRTS_.start(1,t+rantime);
-		// }
-	// if(subtype == MAC_Subtype_CTS){
-	// 		double t =usec(phymib_.getSIFS()+(phymib_.getSIFS()))* 1e-6;// phymib_.getSIFS();
-	// 		//printf("time to wait in CTS %lf at %lf s at %d node\n",t,NOW,index_);
-	// 		mhSenseCTS_.start(0,t);
-	// 	}
-      	
+
+		  	
 	}
 
 
@@ -1901,28 +1916,6 @@ Mac802_11::recv_timer()
 		 *  We don't want to log this event, so we just free
 		 *  the packet instead of calling the drop routine.
 		 */
-		if(subtype == MAC_Subtype_RTS){
-			
-			//double t = 2*phymib_.getSIFS()+txtime(phymib_.getCTSlen(), basicRate_);
-			double t=usec(phymib_.getSIFS()
-			       + txtime(phymib_.getCTSlen(), basicRate_)
-			       + phymib_.getSIFS()+(phymib_.getSIFS()))* 1e-6;
-			
-            double datatime=(mh->dh_duration - usec(phymib_.getSIFS()
-			       + txtime(phymib_.getCTSlen(), basicRate_)
-			       + phymib_.getSIFS()+txtime(phymib_.getACKlen(), basicRate_)
-				       + phymib_.getSIFS()));//* 1e-6;
-
-            int ccc=(Random::random() % 10);
-            
-            //printf("%d\n",ccc );
-            double rantime= t+(ccc*(datatime/10))* 1e-6;
-			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
-				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
-			
-			if(mhSenseRTS_.busy()==0){mhSenseRTS_.start(1,rantime);
-			}
-		}
 		discard(pktRx_, "---");
 		goto done;
 	}

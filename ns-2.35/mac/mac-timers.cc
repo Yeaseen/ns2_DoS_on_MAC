@@ -376,6 +376,7 @@ BackoffTimer::resume(double difs)
 /* ======================================================================
    Sense Timer
    ====================================================================== */
+
 void
 SenseTimer::handle(Event *)
 {
@@ -412,9 +413,9 @@ SenseTimer::start(int cw, double difs)
 	ROUND_TIME();
 #endif
 	assert(rtime  >= 0.0);
-	printf("rtime = %lf\n",NOW+rtime);
+	//printf("rtime = %lf\n",NOW+rtime);
 	s.schedule(this, &intr, rtime);
-	printf("edgi\n");
+	//printf("edgi\n");
 	//schedule a event after given delay time(random time of slot time + DIFS time)
 	
 }

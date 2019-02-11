@@ -145,8 +145,10 @@ public:
 	SenseTimer(Mac802_11 *m) : MacTimer(m), wait(0.0) {}
 	void	start(int cw,double difs);
 	void	handle(Event *e);
+
 private:
 	double	wait;
+
 };
 
 

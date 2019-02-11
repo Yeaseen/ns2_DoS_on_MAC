@@ -579,6 +579,8 @@ private:
 	   ============================================================ */
 	double		nav_;		// Network Allocation Vector
 
+	int globalSRC;
+
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
 	MacState	tx_state_;	// outgoint state
 	int		tx_active_;	// transmitter is ACTIVE
