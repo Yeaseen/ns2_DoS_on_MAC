@@ -778,8 +778,13 @@ Mac802_11::senseHandler()
 	
 	  	mhNav_.stop();
 	  	nav_= NOW;
-	 	
+	 	counterArray[globalSRC]=counterArray[globalSRC]+1;
 	  	printf("DoS attacker is= %d\n", globalSRC );
+
+	  	for(int i=0; i<10;i++){
+	  		printf("For Node %d count= %d\n",i, counterArray[i]);
+
+	  	}
 	  	if(is_idle() && mhBackoff_.paused()){
 	  		mhBackoff_.resume(phymib_.getDIFS());
 	 	}
@@ -1874,13 +1879,13 @@ Mac802_11::recv_timer()
 				//mhSenseRTS_.setID(src);
 			}
 			else if(mhSenseRTS_.busy() && now+navTime>nav_){
-				//int slt=(Random::random() % 5);
-				//double newRantime=now+t+(datatime* 1e-6)-nav_;
-				//double rant=nav_ + (slt*(newRantime/5));
+				int slt=(Random::random() % 5);
+				double newRantime=now+t+(datatime* 1e-6)-nav_;
+				double rant=nav_ + (slt*(newRantime/5)) -now;
 				//mhSenseRTS_.stop();
 				//mhSenseRTS_.start(1,rant);
-				//printf("");
-				//printf("Sender src= %d at %lf and cuurentNode %d,nav=%lf handle= %lf end = %lf \n",src,NOW,index_,nav_,rant,NOW+navTime);
+				printf("");
+				printf("Sender src= %d at %lf and cuurentNode %d,nav=%lf handle= %lf end = %lf \n",src,NOW,index_,nav_,rant,NOW+navTime);
 			}
 		}
       
@@ -2022,6 +2027,7 @@ Mac802_11::recv_timer()
 	rx_resume();
 
 }
+
 
 
 void

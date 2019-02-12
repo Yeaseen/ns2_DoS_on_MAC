@@ -579,7 +579,8 @@ private:
 	   ============================================================ */
 	double		nav_;		// Network Allocation Vector
 
-	int globalSRC;
+	int globalSRC;  // Keeping source for DoS
+	int counterArray[10]= {0};
 
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
 	MacState	tx_state_;	// outgoint state
