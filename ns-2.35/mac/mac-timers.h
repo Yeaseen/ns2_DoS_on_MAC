@@ -151,8 +151,27 @@ private:
 
 };
 
+class LearningTimer : public MacTimer {
+public:
+	LearningTimer(Mac802_11 *m) : MacTimer(m), wait(0.0) {}
+	void	start(int cw,double difs);
+	void	handle(Event *e);
 
+private:
+	double	wait;
 
+};
+
+class ActionTimer : public MacTimer {
+public:
+	ActionTimer(Mac802_11 *m) : MacTimer(m), wait(0.0) {}
+	void	start(int cw,double difs);
+	void	handle(Event *e);
+
+private:
+	double	wait;
+
+};
 
 
 

@@ -365,6 +365,8 @@ class Mac802_11 : public Mac {
 	friend class RxTimer;
 	friend class TxTimer;
 	friend class SenseTimer;
+	friend class LearningTimer;
+	friend class ActionTimer;
 public:
 	Mac802_11();
 	void		recv(Packet *p, Handler *h);
@@ -388,6 +390,8 @@ protected:
 	void	sendHandler(void);
 	void	txHandler(void);
     void	senseHandler(void);
+    void    learningHandler(void);
+    void    actionHandler(void);
 
 private:
 	void	update_client_table(int num, int auth_status, int assoc_status);			
@@ -574,13 +578,20 @@ private:
     SenseTimer mhSenseRTS_;  //Sense Timer for rts
     SenseTimer mhSenseCTS_;  //Sense Timer for cts
     
+    LearningTimer mhLearning_;
+    ActionTimer mhAction_;
+
+
 	/* ============================================================
 	   Internal MAC State
 	   ============================================================ */
 	double		nav_;		// Network Allocation Vector
-
+    int recv1st =0;
 	int globalSRC;  // Keeping source for DoS
-	int counterArray[10]= {0};
+	int counterArrayRTS[10]= {0};
+	int counterArrayNOTDATA[10]={0};
+
+
 
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
 	MacState	tx_state_;	// outgoint state

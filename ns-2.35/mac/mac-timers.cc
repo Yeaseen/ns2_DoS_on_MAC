@@ -420,4 +420,99 @@ SenseTimer::start(int cw, double difs)
 	
 }
 
+/* ======================================================================
+   Learning Timer
+   ====================================================================== */
+
+
+void
+LearningTimer::handle(Event *)
+{
+	busy_ = 0;
+	paused_ = 0;
+	stime = 0.0;
+	rtime = 0.0;
+	wait = 0.0;
+
+	mac->learningHandler();
+}
+
+void
+LearningTimer::start(int cw, double difs)
+{
+	Scheduler &s = Scheduler::instance();
+
+	assert(busy_ == 0);
+
+	busy_ = 1;
+	paused_ = 0;
+	stime = s.clock();
+	wait = difs;
+	
+	if(cw!=0){
+		rtime =wait;//(Random::random() % cw) * mac->phymib_.getSlotTime()+
+		
+	}
+	else{
+		rtime = wait;
+		//+mac->phymib_.getSlotTime();
+	}
+    #ifdef USE_SLOT_TIME
+	ROUND_TIME();
+#endif
+	assert(rtime  >= 0.0);
+	//printf("rtime = %lf\n",NOW+rtime);
+	s.schedule(this, &intr, rtime);
+	//printf("edgi\n");
+	//schedule a event after given delay time(random time of slot time + DIFS time)
+	
+}
+
+/* ======================================================================
+   Action Timer
+   ====================================================================== */
+
+
+void
+ActionTimer::handle(Event *)
+{
+	busy_ = 0;
+	paused_ = 0;
+	stime = 0.0;
+	rtime = 0.0;
+	wait = 0.0;
+
+	mac->actionHandler();
+}
+
+void
+ActionTimer::start(int cw, double difs)
+{
+	Scheduler &s = Scheduler::instance();
+
+	assert(busy_ == 0);
+
+	busy_ = 1;
+	paused_ = 0;
+	stime = s.clock();
+	wait = difs;
+	
+	if(cw!=0){
+		rtime =wait;//(Random::random() % cw) * mac->phymib_.getSlotTime()+
+		
+	}
+	else{
+		rtime = wait;
+		//+mac->phymib_.getSlotTime();
+	}
+    #ifdef USE_SLOT_TIME
+	ROUND_TIME();
+#endif
+	assert(rtime  >= 0.0);
+	//printf("rtime = %lf\n",NOW+rtime);
+	s.schedule(this, &intr, rtime);
+	//printf("edgi\n");
+	//schedule a event after given delay time(random time of slot time + DIFS time)
+	
+}
 
