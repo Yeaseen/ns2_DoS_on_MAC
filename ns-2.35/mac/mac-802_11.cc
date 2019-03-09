@@ -782,10 +782,7 @@ Mac802_11::senseHandler()
 	 	counterArrayNOTDATA[globalSRC]=counterArrayNOTDATA[globalSRC]+1;
 	  	//printf("DoS attacker is= %d\n", globalSRC);
 
-	  	//for(int i=0; i<10;i++){
-	  	//	printf("For Node %d count= %d\n",i, counterArray[i]);
-
-	  	//}
+	  	
 	  	if(is_idle() && mhBackoff_.paused()){
 	  		mhBackoff_.resume(phymib_.getDIFS());
 	 	}
@@ -797,17 +794,78 @@ Mac802_11::senseHandler()
 void
 Mac802_11::learningHandler()
 {
-	mhAction_.start(0,5.0);
-	printf("learn  %lf \n", NOW);
+	double rAv1=0,rA1=0,rL1=0;
+	int iAv=0,iA=0,iL=0;
+	
+	//printf("learn  %lf \n", NOW);
+	for(int i=0; i<10;i++){
+	  	if(counterArrayRTS[i]!=0){
+	  		//printf("%d\n", counterArrayNOTDATA[i]);
+	  		//printf("Learning phase police %d Node %d ratio= %lf\n",index_,i, counterArrayNOTDATA[i]/(double)counterArrayRTS[i]);
+	  		ratioLearn[i]=counterArrayNOTDATA[i]/(double)counterArrayRTS[i];
+	  	}
+	  	else{
+	  		ratioLearn[i]=0.0;
+	  	}
+	  	// if(ratioLearn[i]!=0){
+	  	// 	rL1+=ratioLearn[i];
+	  	// 	iL++;
+	  	// }
+	  	//if(ratioAction[i]!=0){
+	  	// 	rA1+=ratioAction[i];
+	  	// 	iA++;
+	  	// }
+	  	// if(ratioAvg[i]!=0){
+	  	// 	rAv1+=ratioAvg[i];
+	  	// 	iAv++;
+	  	// }
+
+	  	counterArrayRTS[i]=0;
+	  	counterArrayNOTDATA[i]=0;
+	
+	}
+    // if(iL!=0){rL1=rL1/iL;}
+    // if(iA!=0){rA1=rA1/iA;}
+    // if(iAv!=0){rAv1=rAv1/iAv;}
+    //dcsn making space
+    for (int i = 0; i < 10; ++i)
+    {
+     int isA=0;
+     if(i==1) isA=1;
+     //printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, Ra2=%lf,   Rl2=%lf,    Ravg2=%lf,, isAttacker=%d \n",
+     //				index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i], rA1, rL1, rAv1, isA);
+    }
+
+
+    mhAction_.start(0,5.0);
+
+
 }
 
 
 
 void
 Mac802_11::actionHandler()
-{			
+{		
+	//printf("action  %lf \n", NOW);
+	for(int i=0; i<10;i++){
+	  	if(counterArrayRTS[i]!=0){
+	  		//printf("%d\n", counterArrayNOTDATA[i]);
+	  		//printf("Action phase police %d Node %d ratio= %lf\n",index_,i, counterArrayNOTDATA[i]/(double)counterArrayRTS[i]);
+	  		ratioAction[i]=counterArrayNOTDATA[i]/(double)counterArrayRTS[i];
+	  	}
+	  	else{
+	  		ratioAction[i]=0.0;
+	  	}
+	  	ratioAvg[i]=ratioAvg[i]/2+ratioLearn[i]/4+ratioAction[i]/4;
+	  	counterArrayRTS[i]=0;
+	  	counterArrayNOTDATA[i]=0;
+	}
+    
+    
+	
 	mhLearning_.start(0,2.5);
-	printf("action  %lf \n", NOW);
+	//printf("action  %lf \n", NOW);
 }
 
 
@@ -1725,7 +1783,7 @@ Mac802_11::recv(Packet *p, Handler *h)
 
 
 	if(recv1st==0){
-		if(index_==2) mhLearning_.start(0,1);
+	    mhLearning_.start(0,1);
 		recv1st=1;
 	}
 	/*
@@ -1896,6 +1954,7 @@ Mac802_11::recv_timer()
 			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
 				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
 			src = ETHER_ADDR(mh->dh_ta);
+			if(index_==7 && src==1) {printf("%lf   and dest=%d\n",NOW,dst);}
 			//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
 			//mhSenseRTS_.start(1,rantime);
 			double now = Scheduler::instance().clock();

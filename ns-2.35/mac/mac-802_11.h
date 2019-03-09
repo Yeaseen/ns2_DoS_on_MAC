@@ -591,6 +591,10 @@ private:
 	int counterArrayRTS[10]= {0};
 	int counterArrayNOTDATA[10]={0};
 
+	double ratioAvg[10]={0.0};
+	double ratioLearn[10]={0.0};
+	double ratioAction[10]={0.0};
+
 
 
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
