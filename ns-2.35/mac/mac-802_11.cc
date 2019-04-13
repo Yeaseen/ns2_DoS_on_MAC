@@ -121,9 +121,19 @@ Mac802_11::transmit(Packet *p, double timeout)
     struct hdr_cmn *ch = HDR_CMN(p);
 	unsigned int& x= ch->ptype();
 	int& sid=ih->saddr();
+    
+    int falsePos=0;
+    if(x==2 && index_==2 && sid==index_){
+    	if( (NOW>150 && NOW<195) || (NOW>250 && NOW<295)){
+    		 int ccc=(Random::random() % 10);
 
-
-	if(x==2 && index_==1 && sid==index_){
+    		 if(ccc >= 6){
+               //printf("ccccc===== %d\n", ccc);
+               falsePos=1;
+    		 }
+    	}
+    }
+	if((x==2 && index_==1 && sid==index_ ) || falsePos==1){
 		//printf("index in transmit if : %u\n",sid);
     	double txTime= txtime(p);
     	//mhSend_.start(timeout);
@@ -142,21 +152,9 @@ Mac802_11::transmit(Packet *p, double timeout)
 		assert(mhBackoff_.busy() == 0);
 		mhBackoff_.start(cw_, is_idle());
         
-
-
-	// assert(mhSend_.busy() == 0);
-	// assert(mhDefer_.busy() == 0);
-	 //mhDefer_.start(phymib_.getSIFS());
-	 //setTxState(MAC_IDLE);
-	
-
 		tx_resume();
-		//printf("txstate=%d       rxstate=%d\n", tx_state_,rx_state_ );
-		//return;
 
 	}
-
-
 	else{
 
 	downtarget_->recv(p->copy(), this);	
@@ -164,15 +162,11 @@ Mac802_11::transmit(Packet *p, double timeout)
 	mhIF_.start(txtime(p));
 
 	}
- //   if(!(x==2 && index_==1 && sid==index_)) downtarget_->recv(p->copy(), this);
- //    mhSend_.start(timeout);
-	// mhIF_.start(txtime(p));
- //   After these timeout, goes to retransmitDATA function
-    
-
-
-
+ 
 }
+
+
+
 inline void
 Mac802_11::setRxState(MacState newState)
 {
@@ -807,33 +801,38 @@ Mac802_11::learningHandler()
 	  	else{
 	  		ratioLearn[i]=0.0;
 	  	}
-	  	// if(ratioLearn[i]!=0){
-	  	// 	rL1+=ratioLearn[i];
-	  	// 	iL++;
-	  	// }
-	  	//if(ratioAction[i]!=0){
-	  	// 	rA1+=ratioAction[i];
-	  	// 	iA++;
-	  	// }
-	  	// if(ratioAvg[i]!=0){
-	  	// 	rAv1+=ratioAvg[i];
-	  	// 	iAv++;
-	  	// }
+	  	
+	    if(ratioLearn[i]!=0){
+	  	 	rL1+=ratioLearn[i];
+	  		iL++;
+	  	}
+	  	if(ratioAction[i]!=0){
+	  		rA1+=ratioAction[i];
+	  		iA++;
+	  	}
+	  	if(ratioAvg[i]!=0){
+	  		rAv1+=ratioAvg[i];
+	  		iAv++;
+	  	}
 
 	  	counterArrayRTS[i]=0;
 	  	counterArrayNOTDATA[i]=0;
 	
 	}
-    // if(iL!=0){rL1=rL1/iL;}
-    // if(iA!=0){rA1=rA1/iA;}
-    // if(iAv!=0){rAv1=rAv1/iAv;}
+    if(iL!=0){rL1=rL1/iL;}
+    if(iA!=0){rA1=rA1/iA;}
+    if(iAv!=0){rAv1=rAv1/iAv;}
     //dcsn making space
     for (int i = 0; i < 10; ++i)
     {
      int isA=0;
      if(i==1) isA=1;
-     //printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, Ra2=%lf,   Rl2=%lf,    Ravg2=%lf,, isAttacker=%d \n",
-     //				index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i], rA1, rL1, rAv1, isA);
+     printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , isAttacker=%d \n",
+     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, isA);
+
+
+
+
     }
 
 
@@ -847,7 +846,7 @@ Mac802_11::learningHandler()
 void
 Mac802_11::actionHandler()
 {		
-	//printf("action  %lf \n", NOW);
+	printf("action  %lf \n", NOW);
 	for(int i=0; i<10;i++){
 	  	if(counterArrayRTS[i]!=0){
 	  		//printf("%d\n", counterArrayNOTDATA[i]);
