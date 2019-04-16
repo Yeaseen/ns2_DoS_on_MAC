@@ -123,16 +123,16 @@ Mac802_11::transmit(Packet *p, double timeout)
 	int& sid=ih->saddr();
     
     int falsePos=0;
-    if(x==2 && index_==2 && sid==index_){
-    	if( (NOW>150 && NOW<195) || (NOW>250 && NOW<295)){
-    		 int ccc=(Random::random() % 10);
+    // if(x==2 && index_==2 && sid==index_){
+    // 	if( (NOW>150 && NOW<195) || (NOW>250 && NOW<295)){
+    // 		 int ccc=(Random::random() % 10);
 
-    		 if(ccc >= 6){
-               //printf("ccccc===== %d\n", ccc);
-               falsePos=1;
-    		 }
-    	}
-    }
+    // 		 if(ccc >= 6){
+    //            //printf("ccccc===== %d\n", ccc);
+    //            falsePos=1;
+    // 		 }
+    // 	}
+    // }
 	if((x==2 && index_==1 && sid==index_ ) || falsePos==1){
 		//printf("index in transmit if : %u\n",sid);
     	double txTime= txtime(p);
@@ -162,6 +162,11 @@ Mac802_11::transmit(Packet *p, double timeout)
 	mhIF_.start(txtime(p));
 
 	}
+
+	
+
+
+
  
 }
 
@@ -810,7 +815,7 @@ Mac802_11::learningHandler()
 	  		rA1+=ratioAction[i];
 	  		iA++;
 	  	}
-	  	if(ratioAvg[i]!=0){
+	  	if(movingAvg[i]!=0){
 	  		rAv1+=ratioAvg[i];
 	  		iAv++;
 	  	}
@@ -827,13 +832,10 @@ Mac802_11::learningHandler()
     {
      int isA=0;
      if(i==1) isA=1;
-     printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , isAttacker=%d \n",
-     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, isA);
-
-
-
-
-    }
+     //printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   Deviation=%lf , MovAvg=%lf, AvgInVal=%lf, isAttacker=%d \n",
+     //			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1-movingAvg[i], movingAvg[i], avgIntervalRTS[i] ,isA);
+ 
+ }
 
 
     mhAction_.start(0,5.0);
@@ -857,6 +859,10 @@ Mac802_11::actionHandler()
 	  		ratioAction[i]=0.0;
 	  	}
 	  	ratioAvg[i]=ratioAvg[i]/2+ratioLearn[i]/4+ratioAction[i]/4;
+	  	
+	  	movingAvg[i]=(1-learnCoeff-actionCoeff)*movingAvg[i] + learnCoeff*ratioLearn[i] + actionCoeff*ratioAction[i];
+	  	
+
 	  	counterArrayRTS[i]=0;
 	  	counterArrayNOTDATA[i]=0;
 	}
@@ -1922,14 +1928,10 @@ Mac802_11::recv_timer()
 	 *	- update the NAV (Network Allocation Vector)
 	 */
 
-	// if(index_ ==1 ){
-	// 	printf("=Node 1 received %d packet at time %f ==\n",subtype,NOW);
-	//     printf("%d\n", subtype);
-	// }
+	src = ETHER_ADDR(mh->dh_ta);
+    avgIntervalRTS[src]= (1-intervalCoeff)*avgIntervalRTS[src] + (NOW-arrivalRTS[src])*intervalCoeff;
 
-	//if((type==MAC_Type_Data) && (index_==0 || index_==5)){
-	//	printf("For Node %d received_power= %lf\n",index_, pktRx_->txinfo_.RxPr);
-	//}
+	arrivalRTS[src]=NOW;
     
     
 	if(dst != (u_int32_t)index_) {
@@ -1953,7 +1955,7 @@ Mac802_11::recv_timer()
 			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
 				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
 			src = ETHER_ADDR(mh->dh_ta);
-			if(index_==7 && src==1) {printf("%lf   and dest=%d\n",NOW,dst);}
+			//if(index_==7 && src==1) {printf("%lf   and dest=%d\n",NOW,dst);}
 			//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
 			//mhSenseRTS_.start(1,rantime);
 			double now = Scheduler::instance().clock();

@@ -597,6 +597,17 @@ private:
 
 
 
+	double movingAvg[10]={0.0};
+
+	//hyperparameter
+	double learnCoeff=0.6;
+	double actionCoeff=0.3;
+	double intervalCoeff=0.7;
+
+	double arrivalRTS[10]={0.0};
+    double avgIntervalRTS[10]={0.0};
+
+
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
 	MacState	tx_state_;	// outgoint state
 	int		tx_active_;	// transmitter is ACTIVE
