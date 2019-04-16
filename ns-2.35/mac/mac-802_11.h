@@ -364,9 +364,6 @@ class Mac802_11 : public Mac {
 	friend class NavTimer;
 	friend class RxTimer;
 	friend class TxTimer;
-	friend class SenseTimer;
-	friend class LearningTimer;
-	friend class ActionTimer;
 public:
 	Mac802_11();
 	void		recv(Packet *p, Handler *h);
@@ -389,9 +386,6 @@ protected:
 	void	recvHandler(void);
 	void	sendHandler(void);
 	void	txHandler(void);
-    void	senseHandler(void);
-    void    learningHandler(void);
-    void    actionHandler(void);
 
 private:
 	void	update_client_table(int num, int auth_status, int assoc_status);			
@@ -489,7 +483,6 @@ private:
 	void		tx_resume(void);
 
 	inline int	is_idle(void);
-	inline int	is_idle_on_NAV(void);
 
 	/*
 	 * Debugging Functions.
@@ -575,38 +568,11 @@ private:
 	BackoffTimer	mhBackoff_;	// backoff timer
 	BeaconTimer	mhBeacon_;	// Beacon Timer 
 	ProbeTimer	mhProbe_;	//Probe timer, 
-    SenseTimer mhSenseRTS_;  //Sense Timer for rts
-    SenseTimer mhSenseCTS_;  //Sense Timer for cts
-    
-    LearningTimer mhLearning_;
-    ActionTimer mhAction_;
-
 
 	/* ============================================================
 	   Internal MAC State
 	   ============================================================ */
 	double		nav_;		// Network Allocation Vector
-    int recv1st =0;
-	int globalSRC;  // Keeping source for DoS
-	int counterArrayRTS[10]= {0};
-	int counterArrayNOTDATA[10]={0};
-
-	double ratioAvg[10]={0.0};
-	double ratioLearn[10]={0.0};
-	double ratioAction[10]={0.0};
-
-
-
-	double movingAvg[10]={0.0};
-
-	//hyperparameter
-	double learnCoeff=0.6;
-	double actionCoeff=0.3;
-	double intervalCoeff=0.7;
-
-	double arrivalRTS[10]={0.0};
-    double avgIntervalRTS[10]={0.0};
-
 
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
 	MacState	tx_state_;	// outgoint state
@@ -648,4 +614,3 @@ private:
 };
 
 #endif /* __mac_80211_h__ */
-

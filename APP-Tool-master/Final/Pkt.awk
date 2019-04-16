@@ -41,7 +41,7 @@ else if((level == "AGT") && (event == "r")) {
  #print " Receiver Node id = " node_id;
  receivedPackets++;
 }
- else if ((event == "d") && (level == "MAC") && (dos == "DOS")){
+else if ((event == "d") && (level == "MAC") && (dos == "DOS")){
 droppedPackets++; 
 }
 }
@@ -49,7 +49,7 @@ droppedPackets++;
 END{ 
  print "GeneratedPackets = " pktNo;
  print "ReceivedPackets = " receivedPackets;
-print "Packet Delivery Ratio = " receivedPackets/(pktNo)*100
+print "Packet Delivery Ratio = " (receivedPackets/pktNo)*100
  "%";
 print "Total Dropped Packets = " droppedPackets;
  }
