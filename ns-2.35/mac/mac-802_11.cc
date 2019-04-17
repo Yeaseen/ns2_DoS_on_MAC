@@ -246,19 +246,31 @@ Mac802_11::Mac802_11() :
 	mhSenseRTS_(this),mhSenseCTS_(this), mhBeacon_(this), mhProbe_(this)
 {
 	
-    nodeNum=50;
-	ratioAction = new double[nodeNum];
-	ratioLearn = new double[nodeNum];
-	ratioAvg= new double[nodeNum];
-	counterArrayRTS=new int[nodeNum];
-	counterArrayNOTDATA=new int[nodeNum];
+    nodeNum_=50;
+    intervalCoeff=0.7;
+    learnCoeff=0.6;
+	actionCoeff=0.3;
+	ratioAction = new double[nodeNum_];
+	ratioLearn = new double[nodeNum_];
+	ratioAvg= new double[nodeNum_];
+	counterArrayRTS=new int[nodeNum_];
+	counterArrayNOTDATA=new int[nodeNum_];
 
-	for(int i=0;i<nodeNum;i++){
+	movingAvg=new double[nodeNum_];
+	arrivalRTS=new double[nodeNum_];
+	avgIntervalRTS=new double[nodeNum_];
+
+	for(int i=0;i<nodeNum_;i++){
 		ratioAction[i]=0.0;
 		ratioLearn[i]=0.0;
 		ratioAvg[i]=0.0;
 		counterArrayRTS[i]=0;
 		counterArrayNOTDATA[i]=0;
+
+		movingAvg[i]=0;
+        
+        arrivalRTS[i]=0;
+		avgIntervalRTS[i]=0;
 	}
 	nav_ = 0.0;
 	tx_state_ = rx_state_ = MAC_IDLE;
@@ -781,7 +793,7 @@ Mac802_11::backoffHandler()
 void
 Mac802_11::senseHandler()
 {
-	//printf("Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
+	  //printf("Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
 	  //printf("as\n");
 	  counterArrayRTS[globalSRC]=counterArrayRTS[globalSRC]+1;
 	  if(mhNav_.busy() && rx_state_== 0 ){
@@ -804,15 +816,15 @@ Mac802_11::senseHandler()
 void
 Mac802_11::learningHandler()
 {
-	double rAv1=0,rA1=0,rL1=0;
-	int iAv=1,iA=1,iL=1;
+	double rAv1=0,rA1=0,rL1=0, rMAv=0;
+	int iAv=0,iA=0,iL=0, iMav=0;
 	
 	//printf("learn  %lf \n", NOW);
 	// for(int i=0;i<50;i++){
 	// 	printf("%lf %d\n", ratioAction[i],i);
 	// }
 	printf("\n\n\n %d",index_);
-	for(int i=0; i<nodeNum;i++){
+	for(int i=0; i<nodeNum_;i++){
 	  	if(counterArrayRTS[i]!=0){
 	  		//printf("%d\n", counterArrayNOTDATA[i]);
 	  		//printf("Learning phase police %d Node %d ratio= %lf\n",index_,i, counterArrayNOTDATA[i]/(double)counterArrayRTS[i]);
@@ -838,6 +850,16 @@ Mac802_11::learningHandler()
 	  		iAv++;
 	  	}
 
+	  	
+        
+        movingAvg[i]=(1-learnCoeff-actionCoeff)*movingAvg[i] + learnCoeff*ratioLearn[i] + actionCoeff*ratioAction[i];
+	  	
+	  	if(movingAvg[i]!=0){
+	  		rMAv+=movingAvg[i];
+	  		iMav++;
+	  	}
+
+
 	  	counterArrayRTS[i]=0;
 	  	counterArrayNOTDATA[i]=0;
 	
@@ -846,13 +868,14 @@ Mac802_11::learningHandler()
     if(iL!=0){rL1=rL1/iL;}
     if(iA!=0){rA1=rA1/iA;}
     if(iAv!=0){rAv1=rAv1/iAv;}
+    if(iMav!=0){rMAv=rMAv/iMav;}
     //dcsn making space
-    for (int i = 0; i < nodeNum; ++i)
+    for (int i = 0; i < nodeNum_; ++i)
     {
      int isA=0;
      if(i==1) isA=1;
-     printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , isAttacker=%d \n",
-     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, isA);
+     printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
+     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
 
 
 
@@ -871,7 +894,7 @@ void
 Mac802_11::actionHandler()
 {		
 	printf("action  %lf \n", NOW);
-	for(int i=0; i<nodeNum;i++){
+	for(int i=0; i<nodeNum_;i++){
 	  	if(counterArrayRTS[i]!=0){
 	  		//printf("%d\n", counterArrayNOTDATA[i]);
 	  		//printf("Action phase police %d Node %d ratio= %lf\n",index_,i, counterArrayNOTDATA[i]/(double)counterArrayRTS[i]);
@@ -882,6 +905,7 @@ Mac802_11::actionHandler()
 	  		ratioAction[i]=0.0;
 	  	}
 	  	ratioAvg[i]=ratioAvg[i]/2+ratioLearn[i]/4+ratioAction[i]/4;
+	  	
 	  	counterArrayRTS[i]=0;
 	  	counterArrayNOTDATA[i]=0;
 	}
@@ -1968,6 +1992,13 @@ Mac802_11::recv_timer()
 	//	printf("For Node %d received_power= %lf\n",index_, pktRx_->txinfo_.RxPr);
 	//}
     
+
+    src = ETHER_ADDR(mh->dh_ta);
+    avgIntervalRTS[src]= (1-intervalCoeff)*avgIntervalRTS[src] + (NOW-arrivalRTS[src])*intervalCoeff;
+
+	arrivalRTS[src]=NOW;
+
+
     
 	if(dst != (u_int32_t)index_) {
 

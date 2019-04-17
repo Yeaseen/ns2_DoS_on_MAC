@@ -587,7 +587,7 @@ private:
 	   ============================================================ */
 	double		nav_;		// Network Allocation Vector
 
-	int nodeNum;
+	int nodeNum_;
     int recv1st =0;
 	int globalSRC;  // Keeping source for DoS
 	int* counterArrayRTS;
@@ -596,6 +596,15 @@ private:
 	double* ratioAvg;
 	double* ratioLearn;
 	double* ratioAction;
+
+
+	double learnCoeff;
+	double actionCoeff;
+	double* movingAvg;
+
+    int intervalCoeff;
+	double* arrivalRTS;
+	double* avgIntervalRTS;
 
 
 
