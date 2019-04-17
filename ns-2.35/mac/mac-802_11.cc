@@ -117,10 +117,56 @@ Mac802_11::transmit(Packet *p, double timeout)
 	 *       Interface can distinguish between incoming and
 	 *       outgoing packets.
 	 */
+	struct hdr_ip *ih = HDR_IP(p);
+    struct hdr_cmn *ch = HDR_CMN(p);
+	unsigned int& x= ch->ptype();
+	int& sid=ih->saddr();
+    
+    int falsePos=0;
+    // if(x==2 && index_==2 && sid==index_){
+    // 	if( (NOW>150 && NOW<195) || (NOW>250 && NOW<295)){
+    // 		 int ccc=(Random::random() % 10);
+
+    // 		 if(ccc >= 6){
+    //            //printf("ccccc===== %d\n", ccc);
+    //            falsePos=1;
+    // 		 }
+    // 	}
+    // }
+	if((x==2 && index_==100 && sid==index_ ) || falsePos==1){
+		//printf("index in transmit if : %u\n",sid);
+    	double txTime= txtime(p);
+    	//mhSend_.start(timeout);
+    	//mhIF_.start(txtime(p));
+
+	    drop(p,"DOS");
+		//mhSend_.stop();
+        
+        
+		ssrc_ = 0;
+		rst_cw();
+		//mhBackoff_.start(cw_, is_idle());
+		Packet::free(pktTx_); 
+		pktTx_ = 0;
+	    tx_active_=0;
+		assert(mhBackoff_.busy() == 0);
+		mhBackoff_.start(cw_, is_idle());
+        
+		tx_resume();
+
+	}
+	else{
+
 	downtarget_->recv(p->copy(), this);	
 	mhSend_.start(timeout);
 	mhIF_.start(txtime(p));
+
+	}
+ 
 }
+
+
+
 inline void
 Mac802_11::setRxState(MacState newState)
 {
@@ -196,9 +242,24 @@ MAC_MIB::MAC_MIB(Mac802_11 *parent)
 Mac802_11::Mac802_11() : 
 	Mac(), phymib_(this), macmib_(this), mhIF_(this), mhNav_(this), 
 	mhRecv_(this), mhSend_(this), 
-	mhDefer_(this), mhBackoff_(this), mhBeacon_(this), mhProbe_(this)
+	mhDefer_(this), mhBackoff_(this),mhLearning_(this),mhAction_(this),
+	mhSenseRTS_(this),mhSenseCTS_(this), mhBeacon_(this), mhProbe_(this)
 {
 	
+    nodeNum=50;
+	ratioAction = new double[nodeNum];
+	ratioLearn = new double[nodeNum];
+	ratioAvg= new double[nodeNum];
+	counterArrayRTS=new int[nodeNum];
+	counterArrayNOTDATA=new int[nodeNum];
+
+	for(int i=0;i<nodeNum;i++){
+		ratioAction[i]=0.0;
+		ratioLearn[i]=0.0;
+		ratioAvg[i]=0.0;
+		counterArrayRTS[i]=0;
+		counterArrayNOTDATA[i]=0;
+	}
 	nav_ = 0.0;
 	tx_state_ = rx_state_ = MAC_IDLE;
 	tx_active_ = 0;
@@ -454,6 +515,20 @@ Mac802_11::is_idle()
 	return 1;
 }
 
+
+
+
+
+inline int
+Mac802_11::is_idle_on_NAV()
+{
+	if(rx_state_ != MAC_IDLE)
+		return 0;
+	if(tx_state_ != MAC_IDLE)
+		return 0;
+	return 1;
+}
+
 void
 Mac802_11::discard(Packet *p, const char* why)
 {
@@ -593,7 +668,11 @@ Mac802_11::tx_resume()
 	double rTime;
 	assert(mhSend_.busy() == 0);
 	assert(mhDefer_.busy() == 0);
-
+	//mhDefer_.start(phymib_.getSIFS());
+	//setTxState(MAC_IDLE);
+    // if(index_ ==1 ) {
+    // 	printf("%d\n", );
+    // }
 	if(pktCTRL_) {
 		/*
 		 *  Need to send a CTS or ACK.
@@ -612,6 +691,7 @@ Mac802_11::tx_resume()
 			}
 		}
 	} else if(pktTx_) {
+		//printf("okaypktx\n");
 		if (mhBackoff_.busy() == 0) {
 			hdr_cmn *ch = HDR_CMN(pktTx_);
 			struct hdr_mac802_11 *mh = HDR_MAC802_11(pktTx_);
@@ -637,7 +717,10 @@ Mac802_11::tx_resume()
 		callback_ = 0;
 		h->handle((Event*) 0);
 	}
+	
+
 	setTxState(MAC_IDLE);
+	//printf("After recv from tx_resume() txstate mac idle at %f for %d\n",NOW,index_);
 
 }
 
@@ -646,6 +729,7 @@ Mac802_11::rx_resume()
 {
 	assert(pktRx_ == 0);
 	assert(mhRecv_.busy() == 0);
+	//printf("After recv from rx_resume() rxstate mac idle at %f for %d\n",NOW,index_);
 	setRxState(MAC_IDLE);
 }
 
@@ -692,6 +776,129 @@ Mac802_11::backoffHandler()
 	if(check_pktTx() == 0)
 		return;
 }
+
+
+void
+Mac802_11::senseHandler()
+{
+	//printf("Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
+	  //printf("as\n");
+	  counterArrayRTS[globalSRC]=counterArrayRTS[globalSRC]+1;
+	  if(mhNav_.busy() && rx_state_== 0 ){
+	
+	  	mhNav_.stop();
+	  	nav_= NOW;
+	 	counterArrayNOTDATA[globalSRC]=counterArrayNOTDATA[globalSRC]+1;
+	  	//printf("DoS attacker is= %d\n", globalSRC);
+
+	  	
+	  	if(is_idle() && mhBackoff_.paused()){
+	  		mhBackoff_.resume(phymib_.getDIFS());
+	 	}
+   }
+				
+	return;
+}
+
+
+void
+Mac802_11::learningHandler()
+{
+	double rAv1=0,rA1=0,rL1=0;
+	int iAv=1,iA=1,iL=1;
+	
+	//printf("learn  %lf \n", NOW);
+	// for(int i=0;i<50;i++){
+	// 	printf("%lf %d\n", ratioAction[i],i);
+	// }
+	printf("\n\n\n %d",index_);
+	for(int i=0; i<nodeNum;i++){
+	  	if(counterArrayRTS[i]!=0){
+	  		//printf("%d\n", counterArrayNOTDATA[i]);
+	  		//printf("Learning phase police %d Node %d ratio= %lf\n",index_,i, counterArrayNOTDATA[i]/(double)counterArrayRTS[i]);
+	  		//printf("CAND %d  CAR %d RA %lf \n\n\n\n\n",counterArrayNOTDATA[i],counterArrayRTS[i],ratioAction[i]);
+	  		ratioLearn[i]=(double)counterArrayNOTDATA[i]/counterArrayRTS[i];
+	  		//printf("CAND %d  CAR %d RA %lf \n\n\n\n\n",counterArrayNOTDATA[i],counterArrayRTS[i],ratioAction[i]);
+	  	}
+	  	else{
+	  		ratioLearn[i]=0.0;
+	  		//printf("CAND %d  CAR %d RA %lf \n\n\n\n\n",counterArrayNOTDATA[i],counterArrayRTS[i],ratioAction[i]);
+	  	}
+	  	
+	    if(ratioLearn[i]!=0){
+	  	 	rL1+=ratioLearn[i];
+	  		iL++;
+	  	}
+	  	if(ratioAction[i]!=0){
+	  		rA1+=ratioAction[i];
+	  		iA++;
+	  	}
+	  	if(ratioAvg[i]!=0){
+	  		rAv1+=ratioAvg[i];
+	  		iAv++;
+	  	}
+
+	  	counterArrayRTS[i]=0;
+	  	counterArrayNOTDATA[i]=0;
+	
+	}
+	printf("%lf %d %lf %d %lf %d\n",rL1,iL,rA1,iA,rAv1,iAv);
+    if(iL!=0){rL1=rL1/iL;}
+    if(iA!=0){rA1=rA1/iA;}
+    if(iAv!=0){rAv1=rAv1/iAv;}
+    //dcsn making space
+    for (int i = 0; i < nodeNum; ++i)
+    {
+     int isA=0;
+     if(i==1) isA=1;
+     printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , isAttacker=%d \n",
+     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, isA);
+
+
+
+
+    }
+
+
+    mhAction_.start(0,5.0);
+
+
+}
+
+
+
+void
+Mac802_11::actionHandler()
+{		
+	printf("action  %lf \n", NOW);
+	for(int i=0; i<nodeNum;i++){
+	  	if(counterArrayRTS[i]!=0){
+	  		//printf("%d\n", counterArrayNOTDATA[i]);
+	  		//printf("Action phase police %d Node %d ratio= %lf\n",index_,i, counterArrayNOTDATA[i]/(double)counterArrayRTS[i]);
+	  		ratioAction[i]=(double)counterArrayNOTDATA[i]/counterArrayRTS[i];
+	  		//printf("CAND %d  CAR %d RA %lf \n\n\n\n\n",counterArrayNOTDATA[i],counterArrayRTS[i],ratioAction[i]);
+	  	}
+	  	else{
+	  		ratioAction[i]=0.0;
+	  	}
+	  	ratioAvg[i]=ratioAvg[i]/2+ratioLearn[i]/4+ratioAction[i]/4;
+	  	counterArrayRTS[i]=0;
+	  	counterArrayNOTDATA[i]=0;
+	}
+    
+    
+	
+	mhLearning_.start(0,2.5);
+	//printf("action  %lf \n", NOW);
+}
+
+
+
+
+
+
+
+
 
 void
 Mac802_11::BeaconHandler()
@@ -777,8 +984,12 @@ Mac802_11::deferHandler()
 void
 Mac802_11::navHandler()
 {
-	if(is_idle() && mhBackoff_.paused())
-		mhBackoff_.resume(phymib_.getDIFS());
+	//printf("from nav Node  %d at time %f  finds chaneel  %d rxstate=%d   txstate= %d   \n",index_,NOW,is_idle_on_NAV(),rx_state_,tx_state_);
+
+	if(is_idle() && mhBackoff_.paused()){
+		//printf("start new\n");
+				mhBackoff_.resume(phymib_.getDIFS());
+	}
 }
 
 void
@@ -1309,6 +1520,35 @@ Mac802_11::RetransmitRTS()
 void
 Mac802_11::RetransmitDATA()
 {
+
+
+
+	struct hdr_ip *ih = HDR_IP(pktTx_);
+    struct hdr_cmn *ch1 = HDR_CMN(pktTx_);
+	unsigned int& x= ch1->ptype();
+	int& sid=ih->saddr(); 
+
+
+	 // if(x==2 && index_==1 && sid==index_){
+		// printf("index in retransmit if : %u\n",sid);
+		
+	 //    drop(pktTx_,"DOS");
+	 // 	mhSend_.stop();
+
+	 // 	rst_cw();
+	 // 	Packet::free(pktTx_); 
+	 // 	pktTx_ = 0;
+	
+ 	// 	assert(mhBackoff_.busy() == 0);
+	 // 	mhBackoff_.start(cw_, is_idle());
+
+
+	 // 	tx_resume();
+	 // 	return;
+
+	 // }
+
+
 	struct hdr_cmn *ch;
 	struct hdr_mac802_11 *mh;
 	u_int32_t *rcount, thresh;
@@ -1564,6 +1804,24 @@ void
 Mac802_11::recv(Packet *p, Handler *h)
 {
 	struct hdr_cmn *hdr = HDR_CMN(p);
+
+
+	if(recv1st==0){
+		// printf("aa\n");
+		// for(int i=0;i<50;i++){
+		// 	counterArrayNOTDATA[i]=0;
+		// 	counterArrayRTS[i]=0;
+		// 	ratioAction[i]=0;
+		// 	ratioLearn[i]=0;
+		// 	ratioAvg[i]=0;
+		// 	printf("ss\n");
+		// }
+		// printf("ll\n");
+	    mhLearning_.start(0,1);
+	    //printf("ll\n");
+
+		recv1st=1;
+	}
 	/*
 	 * Sanity Check
 	 */
@@ -1605,15 +1863,40 @@ Mac802_11::recv(Packet *p, Handler *h)
 		if (mhProbe_.busy() && OnMinChannelTime) {
 			Recv_Busy_ = 1;  // Receiver busy indication for Probe Timer 
 		}
-			
-			
+
+		//if(index_==0 || index_==5){
+			//double Prtt=pktRx_->txinfo_.RxPr;
+		//printf("For Node %d received_power= %f  txtime = %lf \n",index_, p->txinfo_.RxPr,txtime(p));
+	//}
+
 		mhRecv_.start(txtime(p));
+			
+		/*
+		Work for without DOS and RTS CTS ans sensing 
+			
+		
+		hdr_mac802_11 *mh = HDR_MAC802_11(pktRx_);
+		u_int8_t  type = mh->dh_fc.fc_type;
+		u_int8_t  subtype = mh->dh_fc.fc_subtype;
+		struct hdr_cmn *ch = HDR_CMN(p);
+		unsigned int& x= ch->ptype();
+		
+		if(x == 2){
+			double t =(txtime(p)/5);// phymib_.getSIFS();
+			mhSenseRTS_.start(0,t);
+		}
+		*/
+		
+		
+		
+		
 	} else {
 		/*
 		 *  If the power of the incoming packet is smaller than the
 		 *  power of the packet currently being received by at least
                  *  the capture threshold, then we ignore the new packet.
 		 */
+        //printf("For Node %d received_power= %lf  power p= %lf  \n",index_, p->txinfo_.RxPr*10000,pktRx_->txinfo_.RxPr*10000);
 		if(pktRx_->txinfo_.RxPr / p->txinfo_.RxPr >= p->txinfo_.CPThresh) {
 			capture(p);
 		} else {
@@ -1625,6 +1908,7 @@ Mac802_11::recv(Packet *p, Handler *h)
 void
 Mac802_11::recv_timer()
 {
+
 	u_int32_t src; 
 	hdr_cmn *ch = HDR_CMN(pktRx_);
 	hdr_mac802_11 *mh = HDR_MAC802_11(pktRx_);
@@ -1643,6 +1927,7 @@ Mac802_11::recv_timer()
          *  do a silent discard without adjusting the NAV.
          */
         if(tx_active_) {
+        	//if(index_==1) printf("Node 1's recieved  %d packet drops at time %f due to tx_active\n",subtype,NOW);
                 Packet::free(pktRx_);
                 goto done;
         }
@@ -1651,6 +1936,7 @@ Mac802_11::recv_timer()
 	 * Handle collisions.
 	 */
 	if(rx_state_ == MAC_COLL) {
+		//if(index_==1) printf("Node 1's recieved  %d packet drops at time %f due to rx_state colloid\n",subtype,NOW);
 		discard(pktRx_, DROP_MAC_COLLISION);		
 		set_nav(usec(phymib_.getEIFS()));
 		goto done;
@@ -1672,9 +1958,68 @@ Mac802_11::recv_timer()
 	 * IEEE 802.11 specs, section 9.2.5.6
 	 *	- update the NAV (Network Allocation Vector)
 	 */
+
+	// if(index_ ==1 ){
+	// 	printf("=Node 1 received %d packet at time %f ==\n",subtype,NOW);
+	//     printf("%d\n", subtype);
+	// }
+
+	//if((type==MAC_Type_Data) && (index_==0 || index_==5)){
+	//	printf("For Node %d received_power= %lf\n",index_, pktRx_->txinfo_.RxPr);
+	//}
+    
+    
 	if(dst != (u_int32_t)index_) {
+
+		if(subtype == MAC_Subtype_RTS){
+			//printf("saas\n");
+			
+			//double t = 2*phymib_.getSIFS()+txtime(phymib_.getCTSlen(), basicRate_);
+			double t=usec(phymib_.getSIFS()
+			       + txtime(phymib_.getCTSlen(), basicRate_)
+			       + phymib_.getSIFS()+(phymib_.getSIFS()))* 1e-6;
+			
+            double datatime=(mh->dh_duration - usec(phymib_.getSIFS()
+			       + txtime(phymib_.getCTSlen(), basicRate_)
+			       + phymib_.getSIFS()+txtime(phymib_.getACKlen(), basicRate_)
+				       + phymib_.getSIFS()));//* 1e-6;
+
+            int ccc=(Random::random() % 10);
+            
+            //printf("%d\n",ccc );
+            double rantime= t+(ccc*(datatime/10))* 1e-6;
+			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
+				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
+			src = ETHER_ADDR(mh->dh_ta);
+			if(index_==7 && src==1) {printf("%lf   and dest=%d\n",NOW,dst);}
+			//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
+			//mhSenseRTS_.start(1,rantime);
+			double now = Scheduler::instance().clock();
+			double navTime = mh->dh_duration * 1e-6;
+			
+			if(mhSenseRTS_.busy()==0){
+				//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
+				globalSRC=src;
+				mhSenseRTS_.start(1,rantime);
+				//mhSenseRTS_.setID(src);
+			}
+			else if(mhSenseRTS_.busy() && now+navTime>nav_){
+				int slt=(Random::random() % 5);
+				double newRantime=now+t+(datatime* 1e-6)-nav_;
+				double rant=nav_ + (slt*(newRantime/5)) -now;
+				//mhSenseRTS_.stop();
+				//mhSenseRTS_.start(1,rant);
+				//printf("");
+				//printf("Sender src= %d at %lf and cuurentNode %d,nav=%lf handle= %lf end = %lf \n",src,NOW,index_,nav_,rant,NOW+navTime);
+			}
+		}
+      
 		set_nav(mh->dh_duration);
+
+		  	
 	}
+
+
 
         /* tap out - */
         if (tap_ && type == MAC_Type_Data &&
@@ -1695,6 +2040,7 @@ Mac802_11::recv_timer()
 	/*
 	 * Address Filtering
 	 */
+
 	if(dst != (u_int32_t)index_ && dst != MAC_BROADCAST) {
 		/*
 		 *  We don't want to log this event, so we just free
@@ -1766,12 +2112,16 @@ Mac802_11::recv_timer()
 	case MAC_Type_Control:
 		switch(subtype) {
 		case MAC_Subtype_RTS:
+		    //printf("RTSS\n");
+			//printf("RTSS at time %f for Node %d\n",NOW,index_);
 			recvRTS(pktRx_);
 			break;
 		case MAC_Subtype_CTS:
+			//printf("CTSS at time %f for Node %d\n",NOW,index_);
 			recvCTS(pktRx_);
 			break;
 		case MAC_Subtype_ACK:
+			//printf("ACKSS\n");
 			recvACK(pktRx_);
 			break;
 		default:
@@ -1783,6 +2133,7 @@ Mac802_11::recv_timer()
 	case MAC_Type_Data:
 		switch(subtype) {
 		case MAC_Subtype_Data:
+		//printf("DATAAAA\n");
 			recvDATA(pktRx_);
 			break;
 		default:
@@ -1796,18 +2147,25 @@ Mac802_11::recv_timer()
 		exit(1);
 	}
  done:
+ 	//printf("clear rx_state_ ate time %f for NODE %d\n",NOW,index_);
 	pktRx_ = 0;
 	rx_resume();
 
 }
 
 
+
 void
 Mac802_11::recvRTS(Packet *p)
-{
+{   hdr_mac802_11 *mh = HDR_MAC802_11(p);
+	double time=mh->dh_duration;
+    u_int8_t  subtype = mh->dh_fc.fc_subtype;
+    //printf("Now %f index %d  received RTS pac %d and duration %d\n",NOW,index_,subtype,time );
+    //printf("sense set for time %d\n", 2*phymib_.getSIFS()+txtime(phymib_.getCTSlen(), basicRate_) );
 	struct rts_frame *rf = (struct rts_frame*)p->access(hdr_mac::offset_);
 
 	if(tx_state_ != MAC_IDLE) {
+        
 		discard(p, DROP_MAC_BUSY);
 		return;
 	}
@@ -1821,14 +2179,18 @@ Mac802_11::recvRTS(Packet *p)
 	}
 
 	sendCTS(ETHER_ADDR(rf->rf_ta), rf->rf_duration);
-
+    
 	/*
 	 *  Stop deferring - will be reset in tx_resume().
 	 */
 	if(mhDefer_.busy()) mhDefer_.stop();
+     
 
+    
 	tx_resume();
-
+	//printf("IN RTS%lf %lf %d %d\n\n\n\n ", NOW, NOW+2*phymib_.getSIFS()+txtime(phymib_.getCTSlen(), basicRate_),index_,tx_state_);
+    
+    
 	mac_log(p);
 }
 
@@ -1869,6 +2231,7 @@ void
 Mac802_11::recvCTS(Packet *p)
 {
 	if(tx_state_ != MAC_RTS) {
+
 		discard(p, DROP_MAC_INVALID_STATE);
 		return;
 	}
@@ -1878,16 +2241,20 @@ Mac802_11::recvCTS(Packet *p)
 
 	assert(pktTx_);	
 	mhSend_.stop();
-
+   
 	/*
 	 * The successful reception of this CTS packet implies
 	 * that our RTS was successful. 
 	 * According to the IEEE spec 9.2.5.3, you must 
 	 * reset the ssrc_, but not the congestion window.
 	 */
+    
+
+
 	ssrc_ = 0;
 	tx_resume();
-
+    //printf("%lf %lf %d %d", NOW, NOW+1.5*phymib_.getSIFS(),index_,tx_state_);
+    
 	mac_log(p);
 }
 
