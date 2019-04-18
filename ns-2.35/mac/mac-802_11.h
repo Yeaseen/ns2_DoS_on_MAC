@@ -609,7 +609,7 @@ private:
 	double actionCoeff;
 	double* movingAvg;
 
-    int intervalCoeff=0.5;
+    double intervalCoeff;
 	double* arrivalRTS;
 	double* avgIntervalRTS;
 

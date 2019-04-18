@@ -2062,18 +2062,18 @@ Mac802_11::recv_timer()
 	//}
     
     if(subtype == MAC_Subtype_RTS){
-    	std::ofstream ofs2;
-  		ofs2.open ("/home/yeaseen/Desktop/Scenes/SC50/Output2.txt", std::ofstream::out | std::ofstream::app);
-    	ofs2 << std::fixed;
-    	ofs2 << std::setprecision(7);
+    // 	std::ofstream ofs2;
+  		// ofs2.open ("/home/yeaseen/Desktop/Scenes/SC50/Output2.txt", std::ofstream::out | std::ofstream::app);
+    // 	ofs2 << std::fixed;
+    // 	ofs2 << std::setprecision(7);
     	
     	src = ETHER_ADDR(mh->dh_ta);
-    
+        //intervalCoeff=0.7;
    		avgIntervalRTS[src]= (1-intervalCoeff)*avgIntervalRTS[src] + (NOW-arrivalRTS[src])*intervalCoeff;
 
 		arrivalRTS[src]=NOW;
-		ofs2<<intervalCoeff<<" "<<avgIntervalRTS[src]<<" "<<arrivalRTS[src]<<endl;
-		ofs2.close();	
+		// ofs2<<intervalCoeff<<" "<<avgIntervalRTS[src]<<" "<<arrivalRTS[src]<<endl;
+		// ofs2.close();	
 
     }
 
