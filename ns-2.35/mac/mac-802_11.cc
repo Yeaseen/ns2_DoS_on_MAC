@@ -58,6 +58,10 @@
 #include "agent.h"
 #include "basetrace.h"
 
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+
 
 /* our backoff timer doesn't count down in idle times during a
  * frame-exchange sequence as the mac tx state isn't idle; genreally
@@ -85,6 +89,9 @@ Mac802_11::checkBackoffTimer()
 	if(! is_idle() && mhBackoff_.busy() && ! mhBackoff_.paused())
 		mhBackoff_.pause();
 }
+
+
+
 
 inline void
 Mac802_11::transmit(Packet *p, double timeout)
@@ -122,7 +129,7 @@ Mac802_11::transmit(Packet *p, double timeout)
 	unsigned int& x= ch->ptype();
 	int& sid=ih->saddr();
     
-    int falsePos=0;
+    
     // if(x==2 && index_==2 && sid==index_){
     // 	if( (NOW>150 && NOW<195) || (NOW>250 && NOW<295)){
     // 		 int ccc=(Random::random() % 10);
@@ -133,7 +140,8 @@ Mac802_11::transmit(Packet *p, double timeout)
     // 		 }
     // 	}
     // }
-	if((x==2 && index_==100 && sid==index_ ) || falsePos==1){
+	//if((x==2 && index_==100 && sid==index_ ) || falsePos==1){
+    if(x==2 && isDoSAttacker(index_) && sid==index_ ){
 		//printf("index in transmit if : %u\n",sid);
     	double txTime= txtime(p);
     	//mhSend_.start(timeout);
@@ -246,7 +254,25 @@ Mac802_11::Mac802_11() :
 	mhSenseRTS_(this),mhSenseCTS_(this), mhBeacon_(this), mhProbe_(this)
 {
 	
-    nodeNum_=50;
+	
+    
+    ifstream datafile;
+    datafile.open ("/home/yeaseen/Desktop/Scenes/SC50/data.txt");
+    datafile>>nodeNum_;
+    datafile>>sourceCount;
+    sources = new int[sourceCount];
+    for(int i=0;i<sourceCount;i++){
+    	datafile>>sources[i];
+    }
+    datafile>>attackerCount;
+    attackers = new int[attackerCount];
+    for(int i=0;i<attackerCount;i++){
+    	datafile>>attackers[i];
+    }
+    datafile.close();
+
+
+
     intervalCoeff=0.7;
     learnCoeff=0.6;
 	actionCoeff=0.3;
@@ -331,6 +357,29 @@ Mac802_11::Mac802_11() :
         EOTtarget_ = 0;
        	bss_id_ = IBSS_ID;
 }
+
+
+
+
+bool
+Mac802_11::isDoSAttacker(int node){
+	for(int i=0;i<attackerCount;i++){
+		if(attackers[i]==node) return true;
+	}
+	return false;
+}
+
+
+bool
+Mac802_11::isSource(int node){
+	for(int i=0;i<sourceCount;i++){
+		if(sources[i]==node) return true;
+	}
+	return false;
+}
+
+
+
 
 
 int
@@ -870,17 +919,37 @@ Mac802_11::learningHandler()
     if(iAv!=0){rAv1=rAv1/iAv;}
     if(iMav!=0){rMAv=rMAv/iMav;}
     //dcsn making space
-    for (int i = 0; i < nodeNum_; ++i)
-    {
-     int isA=0;
-     if(i==1) isA=1;
-     printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
+
+
+    std::ofstream ofs;
+  	ofs.open ("/home/yeaseen/Desktop/Scenes/SC50/Output.txt", std::ofstream::out | std::ofstream::app);
+    ofs << std::fixed;
+    ofs << std::setprecision(7);
+  	//ofs << "\n more lorem ipsum";
+
+  
+    for (int i = 0; i < nodeNum_; ++i){
+     
+     int isA;
+     if(isDoSAttacker(i)){
+     	isA=1;
+     	printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
      			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
-
-
-
-
+        if(ratioAction[i]!=0 || ratioLearn[i]!=0) {
+        	ofs <<movingAvg[i]<<"	"<<movingAvg[i]-rMAv<<"	"<<avgIntervalRTS[i]<<"	"<<isA<<endl;
+        	}
+     	}
+     else if(isSource(i)){
+     	isA=0;
+     	printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
+     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
+     	if(ratioAction[i]!=0 || ratioLearn[i]!=0) {
+    		ofs <<movingAvg[i]<<"	"<<movingAvg[i]-rMAv<<"	"<<avgIntervalRTS[i]<<"	"<<isA<<endl;
+    		}
+    	}
     }
+
+    ofs.close();
 
 
     mhAction_.start(0,5.0);
@@ -1992,12 +2061,24 @@ Mac802_11::recv_timer()
 	//	printf("For Node %d received_power= %lf\n",index_, pktRx_->txinfo_.RxPr);
 	//}
     
+    if(subtype == MAC_Subtype_RTS){
+    	std::ofstream ofs2;
+  		ofs2.open ("/home/yeaseen/Desktop/Scenes/SC50/Output2.txt", std::ofstream::out | std::ofstream::app);
+    	ofs2 << std::fixed;
+    	ofs2 << std::setprecision(7);
+    	
+    	src = ETHER_ADDR(mh->dh_ta);
+    
+   		avgIntervalRTS[src]= (1-intervalCoeff)*avgIntervalRTS[src] + (NOW-arrivalRTS[src])*intervalCoeff;
 
-    src = ETHER_ADDR(mh->dh_ta);
-    avgIntervalRTS[src]= (1-intervalCoeff)*avgIntervalRTS[src] + (NOW-arrivalRTS[src])*intervalCoeff;
+		arrivalRTS[src]=NOW;
+		ofs2<<intervalCoeff<<" "<<avgIntervalRTS[src]<<" "<<arrivalRTS[src]<<endl;
+		ofs2.close();	
 
-	arrivalRTS[src]=NOW;
+    }
 
+
+    
 
     
 	if(dst != (u_int32_t)index_) {

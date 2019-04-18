@@ -1,9 +1,10 @@
 BEGIN {
 seqno = -1; 
-droppedPackets = 0;
+DoSdropped= 0;
 receivedPackets = 0;
 count = 0;
 pktNo = 0;
+normalDropped=0;
 }
 {
 # Trace line format: normal
@@ -42,7 +43,10 @@ else if((level == "AGT") && (event == "r")) {
  receivedPackets++;
 }
 else if ((event == "d") && (level == "MAC") && (dos == "DOS")){
-droppedPackets++; 
+DoSdropped++; 
+}
+else if (event == "d"){
+	normalDropped++;
 }
 }
   
@@ -51,5 +55,6 @@ END{
  print "ReceivedPackets = " receivedPackets;
 print "Packet Delivery Ratio = " (receivedPackets/pktNo)*100
  "%";
-print "Total Dropped Packets = " droppedPackets;
+print "Total Dropped Packets for DoS = " DoSdropped;
+#print "Total Dropped Packets without DoS = " normalDropped;
  }

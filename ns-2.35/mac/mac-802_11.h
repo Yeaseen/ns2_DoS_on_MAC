@@ -491,6 +491,9 @@ private:
 	inline int	is_idle(void);
 	inline int	is_idle_on_NAV(void);
 
+	bool isDoSAttacker(int node);
+	bool isSource(int node);
+
 	/*
 	 * Debugging Functions.
 	 */
@@ -588,6 +591,10 @@ private:
 	double		nav_;		// Network Allocation Vector
 
 	int nodeNum_;
+	int attackerCount;
+	int* attackers;
+	int sourceCount;
+	int* sources;
     int recv1st =0;
 	int globalSRC;  // Keeping source for DoS
 	int* counterArrayRTS;
@@ -602,7 +609,7 @@ private:
 	double actionCoeff;
 	double* movingAvg;
 
-    int intervalCoeff;
+    int intervalCoeff=0.5;
 	double* arrivalRTS;
 	double* avgIntervalRTS;
 
