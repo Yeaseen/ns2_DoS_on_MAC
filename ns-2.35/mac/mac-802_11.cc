@@ -257,7 +257,8 @@ Mac802_11::Mac802_11() :
 	
     
     ifstream datafile;
-    datafile.open ("/home/yeaseen/Desktop/Scenes/SC50/data.txt");
+    //datafile.open ("/home/yeaseen/Desktop/Scenes/SC50/data.txt");
+    datafile.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/data.txt");
     datafile>>nodeNum_;
     datafile>>sourceCount;
     sources = new int[sourceCount];
@@ -273,7 +274,7 @@ Mac802_11::Mac802_11() :
 
 
 
-    intervalCoeff=0.7;
+    intervalCoeff=0.5;
     learnCoeff=0.6;
 	actionCoeff=0.3;
 	ratioAction = new double[nodeNum_];
@@ -872,7 +873,7 @@ Mac802_11::learningHandler()
 	// for(int i=0;i<50;i++){
 	// 	printf("%lf %d\n", ratioAction[i],i);
 	// }
-	printf("\n\n\n %d",index_);
+	//printf("\n\n\n %d",index_);
 	for(int i=0; i<nodeNum_;i++){
 	  	if(counterArrayRTS[i]!=0){
 	  		//printf("%d\n", counterArrayNOTDATA[i]);
@@ -913,7 +914,7 @@ Mac802_11::learningHandler()
 	  	counterArrayNOTDATA[i]=0;
 	
 	}
-	printf("%lf %d %lf %d %lf %d\n",rL1,iL,rA1,iA,rAv1,iAv);
+	//printf("%lf %d %lf %d %lf %d\n",rL1,iL,rA1,iA,rAv1,iAv);
     if(iL!=0){rL1=rL1/iL;}
     if(iA!=0){rA1=rA1/iA;}
     if(iAv!=0){rAv1=rAv1/iAv;}
@@ -922,7 +923,7 @@ Mac802_11::learningHandler()
 
 
     std::ofstream ofs;
-  	ofs.open ("/home/yeaseen/Desktop/Scenes/SC50/Output.txt", std::ofstream::out | std::ofstream::app);
+  	ofs.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/Output.txt", std::ofstream::out | std::ofstream::app);
     ofs << std::fixed;
     ofs << std::setprecision(7);
   	//ofs << "\n more lorem ipsum";
@@ -933,23 +934,39 @@ Mac802_11::learningHandler()
      int isA;
      if(isDoSAttacker(i)){
      	isA=1;
-     	printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
-     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
+     	//printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
+     		//	index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
         if(ratioAction[i]!=0 || ratioLearn[i]!=0) {
         	ofs <<movingAvg[i]<<"	"<<movingAvg[i]-rMAv<<"	"<<avgIntervalRTS[i]<<"	"<<isA<<endl;
         	}
      	}
      else if(isSource(i)){
      	isA=0;
-     	printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
-     			index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
+     	//printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
+     			//index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
      	if(ratioAction[i]!=0 || ratioLearn[i]!=0) {
     		ofs <<movingAvg[i]<<"	"<<movingAvg[i]-rMAv<<"	"<<avgIntervalRTS[i]<<"	"<<isA<<endl;
     		}
     	}
+
+
+   //  	if((i==28 && index_==10)||(i==4 && index_==34)){
+			// std::ofstream ofs2;
+  	// 	 	if(i==28){
+  	// 	 		ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/Output10.txt", std::ofstream::out | std::ofstream::app);
+   //   			}
+   //   		else{
+   //   			ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/Output34.txt", std::ofstream::out | std::ofstream::app);
+   //   		}
+   //   		ofs2 << std::fixed;
+   //   		ofs2 << std::setprecision(7);
+   //   		ofs2 <<NOW<<" "<<avgIntervalRTS[i]<<endl;
+   //   		ofs2.flush();
+   //  	 	ofs2.close();
+   //  	 }
     }
 
-    ofs.close();
+    //ofs.close();
 
 
     mhAction_.start(0,5.0);
@@ -2066,9 +2083,15 @@ Mac802_11::recv_timer()
   		// ofs2.open ("/home/yeaseen/Desktop/Scenes/SC50/Output2.txt", std::ofstream::out | std::ofstream::app);
     // 	ofs2 << std::fixed;
     // 	ofs2 << std::setprecision(7);
-    	
+    // ofs2.close();	
     	src = ETHER_ADDR(mh->dh_ta);
         //intervalCoeff=0.7;
+        if(arrivalRTS[src]==0){
+        	arrivalRTS[src]= NOW;
+        }
+        // if(src==28 && ( NOW>425 && NOW<440)){
+        // 	printf("DEST=%d at time= %lf    interval=%lf\n",dst,NOW,NOW-arrivalRTS[src] );
+        // }
    		avgIntervalRTS[src]= (1-intervalCoeff)*avgIntervalRTS[src] + (NOW-arrivalRTS[src])*intervalCoeff;
 
 		arrivalRTS[src]=NOW;
@@ -2129,6 +2152,21 @@ Mac802_11::recv_timer()
 		set_nav(mh->dh_duration);
 
 		  	
+	}
+	else if(dst == (u_int32_t)index_ && subtype == MAC_Subtype_RTS){
+		if(src==28||src==4){
+			std::ofstream ofs2;
+  		 	if(src==28){
+  		 		ofs2.open ("/home/yeaseen/Desktop/Scenes/SC50/Output28.txt", std::ofstream::out | std::ofstream::app);
+     			}
+     		else{
+     			ofs2.open ("/home/yeaseen/Desktop/Scenes/SC50/Output4.txt", std::ofstream::out | std::ofstream::app);
+     		}
+     		ofs2 << std::fixed;
+     		ofs2 << std::setprecision(7);
+     		ofs2 <<dst <<" "<<src<<" "<<NOW<<endl;
+    	 	ofs2.close();
+    	 }
 	}
 
 
