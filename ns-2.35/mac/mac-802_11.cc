@@ -259,6 +259,8 @@ Mac802_11::Mac802_11() :
     ifstream datafile;
     //datafile.open ("/home/yeaseen/Desktop/Scenes/SC50/data.txt");
     datafile.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/data.txt");
+    
+
     datafile>>nodeNum_;
     datafile>>sourceCount;
     sources = new int[sourceCount];
@@ -287,6 +289,14 @@ Mac802_11::Mac802_11() :
 	arrivalRTS=new double[nodeNum_];
 	avgIntervalRTS=new double[nodeNum_];
 
+	weightVector= new double[4];
+    weightVector[0]=2.59804693;
+    weightVector[1]=2.5296639;
+    weightVector[2]=-0.36001139;
+    weightVector[3]=-1.09308601;
+
+	statusDoS= new int[nodeNum_];
+
 	for(int i=0;i<nodeNum_;i++){
 		ratioAction[i]=0.0;
 		ratioLearn[i]=0.0;
@@ -298,6 +308,7 @@ Mac802_11::Mac802_11() :
         
         arrivalRTS[i]=0;
 		avgIntervalRTS[i]=0;
+		statusDoS[i]=0;
 	}
 	nav_ = 0.0;
 	tx_state_ = rx_state_ = MAC_IDLE;
@@ -936,7 +947,7 @@ Mac802_11::learningHandler()
      	isA=1;
      	//printf("Police %d finds %d, Ra=%lf,   Rl=%lf,    Ravg=%lf, AvgRa=%lf, AvgRl=%lf,   AvgRavg=%lf , movAvg=%lf, deviation=%lf, avgInv=%lf,   isAttacker=%d \n",
      		//	index_, i, ratioAction[i], ratioLearn[i], ratioAvg[i],rA1, rL1, rAv1, movingAvg[i], movingAvg[i]-rMAv, avgIntervalRTS[i] ,isA);
-        if(ratioAction[i]!=0 || ratioLearn[i]!=0) {
+        if(ratioAction[i]!=0 || ratioLearn[i]!=0){
         	ofs <<movingAvg[i]<<"	"<<movingAvg[i]-rMAv<<"	"<<avgIntervalRTS[i]<<"	"<<isA<<endl;
         	}
      	}
@@ -948,6 +959,20 @@ Mac802_11::learningHandler()
     		ofs <<movingAvg[i]<<"	"<<movingAvg[i]-rMAv<<"	"<<avgIntervalRTS[i]<<"	"<<isA<<endl;
     		}
     	}
+        double sum=movingAvg[i]*weightVector[0]+(movingAvg[i]-rMAv)*weightVector[1];
+        sum+=avgIntervalRTS[i]*weightVector[3]+weightVector[4];
+
+        if(sum<=0){
+        	statusDoS[i]=0;
+        }
+        else{
+        	statusDoS[i]=1;
+        }
+
+
+
+
+
 
 
    //  	if((i==28 && index_==10)||(i==4 && index_==34)){
@@ -964,6 +989,7 @@ Mac802_11::learningHandler()
    //   		ofs2.flush();
    //  	 	ofs2.close();
    //  	 }
+    
     }
 
     //ofs.close();
@@ -994,6 +1020,8 @@ Mac802_11::actionHandler()
 	  	
 	  	counterArrayRTS[i]=0;
 	  	counterArrayNOTDATA[i]=0;
+
+	  	statusDoS[i]=0;
 	}
     
     
@@ -2103,9 +2131,9 @@ Mac802_11::recv_timer()
 
     
 
-    
-	if(dst != (u_int32_t)index_) {
-
+    src = ETHER_ADDR(mh->dh_ta);
+	//if((dst != (u_int32_t)index_) && (statusDoS[src] == 0)) {
+    if(dst != (u_int32_t)index_) {
 		if(subtype == MAC_Subtype_RTS){
 			//printf("saas\n");
 			
@@ -2126,7 +2154,7 @@ Mac802_11::recv_timer()
 			//printf("RTS rcvd at %lf  for node %d & RTS end time: %lf and datatime= %lf & randtime= %f\n",
 				//NOW,index_,NOW+(mh->dh_duration* 1e-6),datatime* 1e-6,t+rantime);
 			src = ETHER_ADDR(mh->dh_ta);
-			if(index_==7 && src==1) {printf("%lf   and dest=%d\n",NOW,dst);}
+			//if(index_==7 && src==1) {printf("%lf   and dest=%d\n",NOW,dst);}
 			//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
 			//mhSenseRTS_.start(1,rantime);
 			double now = Scheduler::instance().clock();

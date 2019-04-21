@@ -613,6 +613,9 @@ private:
 	double* arrivalRTS;
 	double* avgIntervalRTS;
 
+	double* weightVector;
+	int* statusDoS;
+
 
 
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
