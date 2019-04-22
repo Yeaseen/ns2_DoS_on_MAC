@@ -973,29 +973,85 @@ Mac802_11::learningHandler()
 
 
 
+   ///*** collecting data withDOS ****
 
-
-   //  	if((i==28 && index_==10)||(i==4 && index_==34)){
+   //  	if((i==37 && index_==31)||(i==42 && index_==22)){     
 			// std::ofstream ofs2;
-  	// 	 	if(i==28){
-  	// 	 		ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/Output10.txt", std::ofstream::out | std::ofstream::app);
+			// std::ofstream ofs3;
+			// std::ofstream ofs4;
+  	// 	 	if(i==37){
+  	// 	 		ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/DOSmAvg.txt", std::ofstream::out | std::ofstream::app);
+  	// 	 		ofs3.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/DOSavgIv.txt", std::ofstream::out | std::ofstream::app);
+  	// 	 		ofs4.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/DOSmAVGDEV.txt", std::ofstream::out | std::ofstream::app);
    //   			}
    //   		else{
-   //   			ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/Output34.txt", std::ofstream::out | std::ofstream::app);
+   //   			ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/NormalmAvg.txt", std::ofstream::out | std::ofstream::app);
+   //   			ofs3.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/NormalavgIv.txt", std::ofstream::out | std::ofstream::app);
+  	// 	 		ofs4.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/NormalmAVGDEV.txt", std::ofstream::out | std::ofstream::app);
    //   		}
    //   		ofs2 << std::fixed;
    //   		ofs2 << std::setprecision(7);
-   //   		ofs2 <<NOW<<" "<<avgIntervalRTS[i]<<endl;
+   //   		ofs3 << std::fixed;
+   //   		ofs3 << std::setprecision(7);
+   //   		ofs4 << std::fixed;
+   //   		ofs4 << std::setprecision(7);
+
+
+   //   		ofs2<<NOW<<" "<<movingAvg[i]<<endl;
+   //   		ofs3<<NOW<<" "<<avgIntervalRTS[i]<<endl;
+   //   		ofs4<<NOW<<" "<<movingAvg[i]<<" "<<movingAvg[i]-rMAv<<endl;
+
+
+
+
    //   		ofs2.flush();
    //  	 	ofs2.close();
-   //  	 }
+   //  	 	ofs3.flush();
+   //  	 	ofs3.close();
+   //  	 	ofs4.flush();
+   //  	 	ofs4.close();
+
+    	 // }
+
+
+
+  /// ***withoutDOS data collection****
+
+   //      if(i==42 && index_==22){
+   //      	std::ofstream ofs2;
+			// std::ofstream ofs3;
+			// std::ofstream ofs4;
+
+   //   		ofs2.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/WDOSmAvg.txt", std::ofstream::out | std::ofstream::app);
+   //   		ofs3.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/WDOSavgIv.txt", std::ofstream::out | std::ofstream::app);
+  	// 	 	ofs4.open ("/media/yeaseen/Y D U T S/ScenarioFile/SC5/WDOSmAVGDEV.txt", std::ofstream::out | std::ofstream::app);
+ 			
+ 		// 	ofs2 << std::fixed;
+   //   		ofs2 << std::setprecision(7);
+   //   		ofs3 << std::fixed;
+   //   		ofs3 << std::setprecision(7);
+   //   		ofs4 << std::fixed;
+   //   		ofs4 << std::setprecision(7);
+
+
+   //   		ofs2<<NOW<<" "<<movingAvg[i]<<endl;
+   //   		ofs3<<NOW<<" "<<avgIntervalRTS[i]<<endl;
+   //   		ofs4<<NOW<<" "<<movingAvg[i]<<" "<<movingAvg[i]-rMAv<<endl;
+
+   //   		ofs2.flush();
+   //  	 	ofs2.close();
+   //  	 	ofs3.flush();
+   //  	 	ofs3.close();
+   //  	 	ofs4.flush();
+   //  	 	ofs4.close();
+       	
+
+
+   //      }
     
     }
-
-    //ofs.close();
-
-
-    mhAction_.start(0,5.0);
+  ofs.close();
+  mhAction_.start(0,5.0);
 
 
 }
@@ -2132,8 +2188,8 @@ Mac802_11::recv_timer()
     
 
     src = ETHER_ADDR(mh->dh_ta);
-	//if((dst != (u_int32_t)index_) && (statusDoS[src] == 0)) {
-    if(dst != (u_int32_t)index_) {
+	//if((dst != (u_int32_t)index_) && (statusDoS[src] == 0)) {               ///Action based on SVM
+    if(dst != (u_int32_t)index_) {											  ///Without action
 		if(subtype == MAC_Subtype_RTS){
 			//printf("saas\n");
 			
@@ -2163,8 +2219,8 @@ Mac802_11::recv_timer()
 			if(mhSenseRTS_.busy()==0){
 				//printf("Sender src= %d at %lf and cuurentNode %d\n",src,NOW,index_);
 				globalSRC=src;
-				mhSenseRTS_.start(1,rantime);
-				//mhSenseRTS_.setID(src);
+				mhSenseRTS_.start(1,rantime);          /// RandomRTS Validation
+				//mhSenseRTS_.start(1,t);                  /// RTS Validation
 			}
 			else if(mhSenseRTS_.busy() && now+navTime>nav_){
 				int slt=(Random::random() % 5);
